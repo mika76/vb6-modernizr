@@ -10,3 +10,25 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# User-Specific Workspace Files
+*.vbw
+*.vcc
+*.scc
+
+# Compiled Binaries & Build Outputs
+*.exe
+*.dll
+*.ocx
+*.cab
+
+# Temporary & Cached Files
+*.tmp
+*.dca
+*.log
+*.obj
+
+# Optional: Add-in and Setup Artifacts
+*.pdb
+*.tlh
+*.tli
