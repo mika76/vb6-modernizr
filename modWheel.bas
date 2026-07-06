@@ -20,8 +20,10 @@ Private Const VK_CONTROL As Long = &H11
 Private Const VK_ESCAPE As Long = &H1B
 Private Const VK_UP As Long = &H26
 Private Const VK_DOWN As Long = &H28
+Private Const VK_B As Long = &H42
 Private Const VK_D As Long = &H44
 Private Const VK_F As Long = &H46
+Private Const VK_G As Long = &H47
 Private Const VK_K As Long = &H4B
 Private Const VK_O As Long = &H4F
 Private Const VK_F2 As Long = &H71
@@ -144,6 +146,18 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
     Case VK_O
         If ctrl And shift And FocusInCodePane() Then
             frmBrowser.ShowBrowser
+            HandleKeyDown = True
+        End If
+
+    Case VK_G
+        If ctrl And shift And FocusInCodePane() Then
+            frmChanges.ShowChanges
+            HandleKeyDown = True
+        End If
+
+    Case VK_B
+        If ctrl And shift And FocusInCodePane() Then
+            Git_BlameCurrentLine
             HandleKeyDown = True
         End If
 

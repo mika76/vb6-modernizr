@@ -84,6 +84,8 @@ Private Sub TermAddin()
     Unload frmRefs
     Unload frmSwitcher
     Unload frmShortcuts
+    Unload frmBrowser
+    Unload frmChanges
 
     If Not mMenuPopup Is Nothing Then mMenuPopup.Delete
     Set mMenuPopup = Nothing
@@ -124,6 +126,9 @@ Private Sub AddMenus()
     AddBtn "Move Lines Do&wn (Alt+Down)", "movedown", False
     AddBtn "Delete Li&nes (Ctrl+Shift+K)", "delline", False
     AddBtn "&Comment / Uncomment (Ctrl+/)", "comment", False
+
+    AddBtn "Git Chan&ges / Commit... (Ctrl+Shift+G)", "gitchanges", True
+    AddBtn "Git Blame Line (Ctrl+Shift+B)", "gitblame", False
 
     AddBtn "Clear &Highlights", "clearhl", True
     AddBtn "Show/Hide &Tabs", "tabs", False

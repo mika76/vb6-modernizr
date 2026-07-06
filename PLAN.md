@@ -53,24 +53,25 @@ M (a day-ish), L (multiple days). Check items off as they land.
 All via shelling out to `git.exe` (must be on PATH; no linked
 dependency). Needs one shared piece first:
 
-- [ ] **Git plumbing** (M) — run git with captured stdout without
-      blocking the IDE (hidden process + temp-file redirect, polled by
-      the existing refresh timer); cache per-file results, invalidate
-      on save. Detect repo root from the project folder; degrade to
-      "no git" silently.
-- [ ] **Branch + dirty state in the tab bar** (S) — right-aligned
-      `branch-name *` label from `git status --porcelain -b`.
-- [ ] **Changed-file dots on tabs** (S) — color the tab glyph when the
-      component's file is modified vs HEAD.
-- [ ] **Changed-line markers** (L) — diff `CodeModule` contents against
-      `git show HEAD:file` (header offset compensated, same math as
-      Find in Files); paint margin/scrollbar marks via the overlay
-      painter. VS-style green/blue bars.
-- [ ] **Changes window** (M) — list of modified files (reuse results
-      window pattern), double-click to open; optional simple commit
-      (message box -> `git add` + `git commit`).
-- [ ] **Blame current line** (M) — `git blame -L n,n --porcelain`,
-      shown in the find bar status area or a tooltip.
+- [x] **Git plumbing** (M) — modGit: repo root found by walking up
+      from the project folder (no process); async one-job-at-a-time
+      runner (hidden `cmd /c git ... > tempfile`, completion polled by
+      the tab-bar timer via GetExitCodeProcess); status every ~5 s;
+      degrades silently without git/repo.
+- [x] **Branch + dirty state in the tab bar** (S) — gray right-aligned
+      `branch *` label.
+- [x] **Changed-file dots on tabs** (S) — orange dot by the type glyph
+      when any of the component's files is modified.
+- [x] **Changed-line markers** (L) — implemented via `git diff -U0`
+      hunks (git does the diffing) mapped to module lines with the
+      header offset; margin bars green=added, blue=modified,
+      red=deletion-below; also colored on the scrollbar. Reflects the
+      SAVED file vs HEAD (unsaved editor changes not included).
+- [x] **Changes window** (M) — Ctrl+Shift+G: changed files (double-
+      click opens), commit message box + Commit All (`git add -A` +
+      `git commit -F tempfile`).
+- [x] **Blame current line** (M) — Ctrl+Shift+B: author/date/summary
+      message box via `git blame -L n,n --porcelain`.
 
 Repo hygiene: `.gitattributes` forcing CRLF for VB6 sources and
 marking `*.frx` etc. binary — done.

@@ -103,7 +103,13 @@ Private Sub tmrRefresh_Timer()
     If gVBE Is Nothing Then Exit Sub
     If gTabBarVisible Then RefreshTabs False
     BM_Poll
+    Git_Poll
     Highlight_EnsureHooks
+End Sub
+
+' external state (git) changed: repaint on the next tick
+Public Sub ForceRedraw()
+    mSig = ""
 End Sub
 
 Private Sub RefreshTabs(ByVal force As Boolean)
@@ -177,8 +183,16 @@ Private Sub Redraw()
     mTabCount = 0
     If n = 0 Then Exit Sub
 
+    ' git branch label, right-aligned before the drop button
+    Dim gitLbl As String, gitW As Long
+    gitLbl = Git_Branch()
+    If Len(gitLbl) > 0 Then
+        If Git_RepoDirty() Then gitLbl = gitLbl & " *"
+        gitW = Me.TextWidth(gitLbl) + 12
+    End If
+
     Dim avail As Long
-    avail = w - DROPBTN_W - 4
+    avail = w - DROPBTN_W - gitW - 4
 
     If mScroll < 1 Then mScroll = 1
     If mScroll > n Then mScroll = n
@@ -220,6 +234,14 @@ TryLayout:
     Next
 
     DrawDropButton
+
+    If gitW > 0 Then
+        Me.CurrentX = w - DROPBTN_W - gitW + 6
+        Me.CurrentY = (H - Me.TextHeight("X")) \ 2 + 1
+        Me.ForeColor = vbGrayText
+        Me.Print gitLbl
+        Me.ForeColor = vbButtonText
+    End If
 End Sub
 
 Private Function TabCaption(ByVal w As VBIDE.Window) As String
@@ -251,6 +273,15 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     gy = H \ 2
     gc = IIf(w.Type = vbext_wt_CodeWindow, COLOR_CODE, COLOR_DESIGN)
     Me.Line (l + 6, gy - 3)-(l + 12, gy + 3), gc, BF
+
+    ' orange dot above the glyph = file modified vs git HEAD
+    Dim nm As String, pp As Long
+    nm = TabCaption(w)
+    pp = InStrRev(nm, " (")
+    If pp > 0 Then nm = Left$(nm, pp - 1)
+    If Git_IsCompChanged(nm) Then
+        Me.Line (l + 13, gy - 7)-(l + 17, gy - 3), &H157DE9, BF
+    End If
 
     ' caption, clipped to the tab; measure in the style it draws in
     Dim cap As String

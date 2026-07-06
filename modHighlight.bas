@@ -55,7 +55,7 @@ Public Sub Highlight_Terminate()
 End Sub
 
 Public Function Highlight_Active() As Boolean
-    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0)
+    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0 Or Git_MarkCount() > 0)
 End Function
 
 ' Hook every open code pane (and its vertical scrollbar) that has
@@ -63,7 +63,7 @@ End Function
 ' newly opened panes get hooked too.
 Public Sub Highlight_EnsureHooks()
     On Error Resume Next
-    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
+    If Not Highlight_Active() Then Exit Sub
     Dim cp As VBIDE.CodePane, H As Long
     For Each cp In gVBE.CodePanes
         H = CodePaneHwnd(cp)
@@ -107,7 +107,7 @@ End Sub
 
 Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     On Error Resume Next
-    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
+    If Not Highlight_Active() Then Exit Sub
 
     Dim cp As VBIDE.CodePane
     Set cp = PaneFromHwnd(hwnd)
@@ -195,12 +195,46 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
         DeleteObject hBmBr
     End If
 
+    ' git changed-line bars at the right edge of the margin:
+    ' green = added, blue = modified, red = deletion below this line
+    Dim gitLines() As Long, gitKinds() As Long, nGit As Long
+    nGit = Git_MarksForComp(compName, gitLines, gitKinds)
+    If nGit > 0 Then
+        For i = 0 To nGit - 1
+            If gitLines(i) >= topLine And gitLines(i) < topLine + visLines And _
+               gitLines(i) >= loLine And gitLines(i) <= hiLine Then
+                y = yTop + (gitLines(i) - topLine) * lineH
+                DrawGitBar hdc, marginPx - 5, y, marginPx - 1, y + lineH, _
+                           gitKinds(i)
+            End If
+        Next
+    End If
+
     ReleaseDC hwnd, hdc
+End Sub
+
+Private Sub DrawGitBar(ByVal hdc As Long, ByVal x1 As Long, ByVal Y1 As Long, _
+        ByVal x2 As Long, ByVal Y2 As Long, ByVal kind As Long)
+    Dim clr As Long, hBr As Long, hPn As Long, hOP As Long, hOB As Long
+    Select Case kind
+    Case GITK_ADD: clr = &H3CA03C          ' green
+    Case GITK_MOD: clr = &HFF901E          ' dodger blue
+    Case Else:     clr = &H3C3CC8          ' red (deletion marker)
+    End Select
+    hBr = CreateSolidBrush(clr)
+    hPn = CreatePen(PS_SOLID, 1, clr)
+    hOP = SelectObject(hdc, hPn)
+    hOB = SelectObject(hdc, hBr)
+    Rectangle hdc, x1, Y1, x2, Y2
+    SelectObject hdc, hOP
+    SelectObject hdc, hOB
+    DeleteObject hPn
+    DeleteObject hBr
 End Sub
 
 Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     On Error Resume Next
-    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
+    If Not Highlight_Active() Then Exit Sub
 
     ' The scrollbar is a child of the VbaWindow editor.
     Dim hPane As Long
@@ -274,6 +308,19 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
         SelectObject hdc, hOldBr
         DeleteObject hBmPen
         DeleteObject hBmBr
+    End If
+
+    ' git marks on the scrollbar, colored by kind
+    Dim gitLines() As Long, gitKinds() As Long, nGit As Long
+    nGit = Git_MarksForComp(compName, gitLines, gitKinds)
+    If nGit > 0 Then
+        For i = 0 To nGit - 1
+            If gitLines(i) >= loLine And gitLines(i) <= hiLine Then
+                y = arrowH + CLng((gitLines(i) - loLine) / totalLines * trackH)
+                DrawGitBar hdc, 2, y, (rc.Right - rc.Left) \ 2, y + 3, _
+                           gitKinds(i)
+            End If
+        Next
     End If
 
     ReleaseDC hwnd, hdc
