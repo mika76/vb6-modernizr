@@ -34,6 +34,15 @@ Begin VB.Form frmTabs
       Begin VB.Menu mnuCtxCloseAll
          Caption         =   "Close &All"
       End
+      Begin VB.Menu mnuCtxSep1
+         Caption         =   "-"
+      End
+      Begin VB.Menu mnuCtxCopyPath
+         Caption         =   "Copy &Full Path"
+      End
+      Begin VB.Menu mnuCtxOpenFolder
+         Caption         =   "Open Containin&g Folder"
+      End
    End
    Begin VB.Menu mnuList
       Caption         =   "list"
@@ -75,6 +84,12 @@ Private mScroll As Long          ' first visible tab (1-based)
 Private mCtxIdx As Long          ' tab targeted by the context menu
 Private mLastAct As String       ' last active-window key fed to MRU
 
+Private mOrder As Collection     ' user tab order (keys), survives refresh
+Private mDragIdx As Long         ' mWins index being dragged, 0 = none
+Private mDragKey As String
+Private mDownX As Single
+Private mDragging As Boolean
+
 ' ---------------------------------------------------------------------
 
 Public Sub Attach()
@@ -114,24 +129,55 @@ End Sub
 
 Private Sub RefreshTabs(ByVal force As Boolean)
     On Error Resume Next
-    Dim w As VBIDE.Window
-    Dim col As New Collection
-    Dim sig As String, actCap As String, i As Long
+    Dim w As VBIDE.Window, j As Long, k As String
+    Dim raw As New Collection      ' windows in IDE order
+    Dim byKey As New Collection    ' keyed, unclaimed windows
+    Dim ordered As New Collection
 
     For Each w In gVBE.Windows
         If w.Visible Then
             If w.Type = vbext_wt_CodeWindow Or w.Type = vbext_wt_Designer Then
-                col.Add w
-                sig = sig & NormalizeCaption(w.Caption) & "|" & w.Type & ";"
+                raw.Add w
+                Err.Clear
+                byKey.Add w, WinKey(w)
+                Err.Clear
             End If
         End If
     Next
 
-    Dim aw As VBIDE.Window
+    ' user-defined order first, new windows appended at the end
+    If mOrder Is Nothing Then Set mOrder = New Collection
+    For j = 1 To mOrder.Count
+        k = mOrder(j)
+        Err.Clear
+        Set w = byKey(k)
+        If Err.Number = 0 Then
+            ordered.Add w
+            byKey.Remove k
+        End If
+    Next
+    For j = 1 To raw.Count
+        k = WinKey(raw(j))
+        Err.Clear
+        Set w = byKey(k)
+        If Err.Number = 0 Then
+            ordered.Add w
+            byKey.Remove k
+            mOrder.Add k, k
+        End If
+    Next
+
+    Dim sig As String
+    For j = 1 To ordered.Count
+        sig = sig & WinKey(ordered(j)) & _
+              IIf(TabDirty(ordered(j)), "*", "") & ";"
+    Next
+
+    Dim aw As VBIDE.Window, actCap As String
     Set aw = gVBE.ActiveWindow
     If Not aw Is Nothing Then
         If aw.Type = vbext_wt_CodeWindow Or aw.Type = vbext_wt_Designer Then
-            actCap = NormalizeCaption(aw.Caption) & "|" & aw.Type
+            actCap = WinKey(aw)
             ' keep MDI children maximized while the tab bar is on
             If gTabBarVisible And aw.WindowState <> vbext_ws_Maximize Then
                 aw.WindowState = vbext_ws_Maximize
@@ -146,13 +192,13 @@ Private Sub RefreshTabs(ByVal force As Boolean)
 
     If sig = mSig And Not force Then Exit Sub
     mSig = sig
-    Set mWins = col
+    Set mWins = ordered
 
     mActiveIdx = 0
     If Len(actCap) > 0 Then
-        For i = 1 To mWins.Count
-            If NormalizeCaption(mWins(i).Caption) & "|" & mWins(i).Type = actCap Then
-                mActiveIdx = i
+        For j = 1 To mWins.Count
+            If WinKey(mWins(j)) = actCap Then
+                mActiveIdx = j
                 Exit For
             End If
         Next
@@ -160,6 +206,37 @@ Private Sub RefreshTabs(ByVal force As Boolean)
 
     Redraw
 End Sub
+
+Private Function WinKey(ByVal w As VBIDE.Window) As String
+    On Error Resume Next
+    WinKey = NormalizeCaption(w.Caption) & "|" & w.Type
+End Function
+
+Private Function CompForWindow(ByVal w As VBIDE.Window) As VBIDE.VBComponent
+    On Error Resume Next
+    Dim nm As String, pp As Long
+    nm = NormalizeCaption(w.Caption)
+    pp = InStrRev(nm, " (")
+    If pp > 0 Then nm = Left$(nm, pp - 1)
+    Dim proj As VBIDE.VBProject
+    For Each proj In gVBE.VBProjects
+        Set CompForWindow = Nothing
+        Err.Clear
+        Set CompForWindow = proj.VBComponents(nm)
+        If Not CompForWindow Is Nothing Then Exit Function
+    Next
+End Function
+
+Private Function TabDirty(ByVal w As VBIDE.Window) As Boolean
+    On Error Resume Next
+    Dim comp As VBIDE.VBComponent
+    Set comp = CompForWindow(w)
+    If Not comp Is Nothing Then TabDirty = comp.IsDirty
+End Function
+
+Private Function TabDispCaption(ByVal w As VBIDE.Window) As String
+    TabDispCaption = TabCaption(w) & IIf(TabDirty(w), " *", "")
+End Function
 
 ' ---------------------------------------------------------------------
 
@@ -210,7 +287,7 @@ TryLayout:
     ' one width for both states keeps tabs from resizing on activation
     Me.FontBold = True
     For i = mScroll To n
-        cap = TabCaption(mWins(i))
+        cap = TabDispCaption(mWins(i))
         tw = Me.TextWidth(cap) + 26
         If tw < ScaleForDpi(60) Then tw = ScaleForDpi(60)
         If tw > ScaleForDpi(200) Then tw = ScaleForDpi(200)
@@ -284,13 +361,14 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     End If
 
     ' caption, clipped to the tab; measure in the style it draws in
-    Dim cap As String
+    Dim full As String, cap As String
     Me.FontBold = active
-    cap = TabCaption(w)
+    full = TabDispCaption(w)
+    cap = full
     Do While Me.TextWidth(cap) > (r - l - 24) And Len(cap) > 1
         cap = Left$(cap, Len(cap) - 1)
     Loop
-    If cap <> TabCaption(w) Then cap = Left$(cap, Len(cap) - 1) & Chr$(133)
+    If cap <> full Then cap = Left$(cap, Len(cap) - 1) & Chr$(133)
 
     Me.CurrentX = l + 16
     Me.CurrentY = (H - Me.TextHeight("X")) \ 2 + 1
@@ -342,6 +420,11 @@ Private Sub Form_MouseDown(Button As Integer, Shift As Integer, _
     Select Case Button
     Case vbLeftButton
         ActivateTab idx
+        ' arm a possible drag-reorder
+        mDragIdx = idx
+        mDragKey = WinKey(mWins(idx))
+        mDownX = x
+        mDragging = False
     Case vbMiddleButton
         CloseTab idx
     Case vbRightButton
@@ -350,6 +433,55 @@ Private Sub Form_MouseDown(Button As Integer, Shift As Integer, _
         PopupMenu mnuCtx
     End Select
 End Sub
+
+Private Sub Form_MouseMove(Button As Integer, Shift As Integer, _
+        x As Single, y As Single)
+    On Error Resume Next
+    If (Button And vbLeftButton) = 0 Then Exit Sub
+    If mDragIdx = 0 Then Exit Sub
+    If Not mDragging Then
+        If Abs(x - mDownX) > 6 Then mDragging = True
+    End If
+    If mDragging Then
+        Dim tgt As Long
+        tgt = HitTest(x)
+        If tgt > 0 Then
+            If WinKey(mWins(tgt)) <> mDragKey Then DragReorder tgt
+        End If
+    End If
+End Sub
+
+Private Sub Form_MouseUp(Button As Integer, Shift As Integer, _
+        x As Single, y As Single)
+    mDragIdx = 0
+    mDragging = False
+End Sub
+
+' Move the dragged tab's key so it lands before/after the target
+' (after when dragging rightwards, before when dragging leftwards).
+Private Sub DragReorder(ByVal targetIdx As Long)
+    On Error Resume Next
+    Dim tKey As String, posD As Long, posT As Long
+    tKey = WinKey(mWins(targetIdx))
+    posD = OrderPos(mDragKey)
+    posT = OrderPos(tKey)
+    If posD = 0 Or posT = 0 Then Exit Sub
+
+    mOrder.Remove mDragKey
+    If posT > mOrder.Count Then
+        mOrder.Add mDragKey, mDragKey
+    Else
+        mOrder.Add mDragKey, mDragKey, posT
+    End If
+    RefreshTabs True
+End Sub
+
+Private Function OrderPos(ByVal k As String) As Long
+    Dim i As Long
+    For i = 1 To mOrder.Count
+        If mOrder(i) = k Then OrderPos = i: Exit Function
+    Next
+End Function
 
 Private Sub ActivateTab(ByVal idx As Long)
     On Error Resume Next
@@ -386,6 +518,25 @@ Private Sub mnuCtxCloseAll_Click()
         mWins(i).Close
     Next
     RefreshTabs True
+End Sub
+
+Private Sub mnuCtxCopyPath_Click()
+    On Error Resume Next
+    Dim comp As VBIDE.VBComponent
+    Set comp = CompForWindow(mWins(mCtxIdx))
+    If comp Is Nothing Then Exit Sub
+    If comp.FileCount = 0 Then Exit Sub
+    Clipboard.Clear
+    Clipboard.SetText comp.FileNames(1)
+End Sub
+
+Private Sub mnuCtxOpenFolder_Click()
+    On Error Resume Next
+    Dim comp As VBIDE.VBComponent
+    Set comp = CompForWindow(mWins(mCtxIdx))
+    If comp Is Nothing Then Exit Sub
+    If comp.FileCount = 0 Then Exit Sub
+    Shell "explorer.exe /select,""" & comp.FileNames(1) & """", vbNormalFocus
 End Sub
 
 ' Drop-down list of all windows (for when tabs overflow)

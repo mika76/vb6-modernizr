@@ -84,9 +84,12 @@ marking `*.frx` etc. binary — done.
 
 ## Phase 4 — tab bar extras
 
-- [ ] Dirty marker `*` on tabs via `VBComponent.IsDirty` (S)
-- [ ] Drag to reorder tabs (M)
-- [ ] "Copy full path" on the tab context menu (S)
+- [x] Dirty marker `*` on tabs via `VBComponent.IsDirty` (S) — part of
+      the change signature, so tabs repaint when dirty state flips.
+- [x] Drag to reorder tabs (M) — custom order kept in a key list that
+      survives refreshes; new windows append at the end.
+- [x] "Copy full path" + "Open containing folder" on the tab context
+      menu (S).
 
 ## Phase 5 — bigger swings
 
