@@ -19,6 +19,7 @@ Public Sub DoAction(ByVal act As String)
     Case "bmnext":    BM_NextBookmark
     Case "bmclear":   BM_ClearAll
     Case "gitchanges": frmChanges.ShowChanges
+    Case "gitlog":    frmGitLog.ShowLog
     Case "gitblame":  Git_BlameCurrentLine
     Case "dup":       Edit_DuplicateLines
     Case "moveup":    Edit_MoveLinesUp

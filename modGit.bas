@@ -336,7 +336,9 @@ Private Sub ParseStatus(ByVal outText As String)
             If p > 0 Then rel = Mid$(rel, p + 4)
             If Left$(rel, 1) = """" Then rel = Mid$(rel, 2, Len(rel) - 2)
             fp = mRepoRoot & "\" & Replace$(rel, "/", "\")
-            mChanged.Add Trim$(st), LCase$(fp)
+            ' keep the raw two-char XY code: X = index (staged),
+            ' Y = worktree (unstaged)
+            mChanged.Add st, LCase$(fp)
             mChangedKeys.Add fp
             mRepoDirty = True
         End If
@@ -548,9 +550,9 @@ Public Sub Git_BlameCurrentLine()
     End If
 End Sub
 
-' Stage everything and commit with the given message. Returns git's
-' output. The message goes via a temp file to dodge quoting issues.
-Public Function Git_CommitAll(ByVal msg As String) As String
+' Commit whatever is staged. The message goes via a temp file to
+' dodge quoting issues. Returns git's output.
+Public Function Git_CommitStaged(ByVal msg As String) As String
     On Error Resume Next
     If Len(mRepoRoot) = 0 Then Exit Function
     Dim mf As String, ff As Integer
@@ -560,11 +562,58 @@ Public Function Git_CommitAll(ByVal msg As String) As String
     Print #ff, msg
     Close #ff
 
-    Git_RunSync "add -A", 15000
-    Git_CommitAll = Git_RunSync("commit -F """ & mf & """", 15000)
+    Git_CommitStaged = Git_RunSync("commit -F """ & mf & """", 15000)
     If Len(Dir$(mf)) > 0 Then Kill mf
-    Git_RefreshNow
+    Git_StatusRefreshSync
 End Function
+
+' --- staging / unstaging (synchronous, these are fast) ----------------
+
+Public Sub Git_StageFiles(paths As Collection)
+    On Error Resume Next
+    If paths.Count = 0 Then Exit Sub
+    Git_RunSync "add -- " & QuoteList(paths), 15000
+    Git_StatusRefreshSync
+End Sub
+
+Public Sub Git_UnstageFiles(paths As Collection)
+    On Error Resume Next
+    If paths.Count = 0 Then Exit Sub
+    Git_RunSync "reset -q HEAD -- " & QuoteList(paths), 15000
+    Git_StatusRefreshSync
+End Sub
+
+Public Sub Git_StageAll()
+    On Error Resume Next
+    Git_RunSync "add -A", 15000
+    Git_StatusRefreshSync
+End Sub
+
+Public Sub Git_UnstageAll()
+    On Error Resume Next
+    Git_RunSync "reset -q HEAD", 15000
+    Git_StatusRefreshSync
+End Sub
+
+Private Function QuoteList(paths As Collection) As String
+    Dim i As Long, s As String
+    For i = 1 To paths.Count
+        s = s & """" & RelPath(CStr(paths(i))) & """ "
+    Next
+    QuoteList = Trim$(s)
+End Function
+
+' Run status right now (sync, bounded) so stage/unstage feels instant.
+Public Sub Git_StatusRefreshSync()
+    On Error Resume Next
+    If Len(mRepoRoot) = 0 Then Exit Sub
+    Dim res As String
+    res = Git_RunSync("status --porcelain=v1 -b", 8000)
+    If Len(res) = 0 Then Exit Sub          ' git missing or timed out
+    ParseStatus res
+    EnqueueDiffsForOpenPanes
+    frmTabs.ForceRedraw
+End Sub
 
 ' =====================================================================
 '  Small utilities

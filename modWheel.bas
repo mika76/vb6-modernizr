@@ -25,6 +25,7 @@ Private Const VK_D As Long = &H44
 Private Const VK_F As Long = &H46
 Private Const VK_G As Long = &H47
 Private Const VK_K As Long = &H4B
+Private Const VK_L As Long = &H4C
 Private Const VK_O As Long = &H4F
 Private Const VK_F2 As Long = &H71
 Private Const VK_F3 As Long = &H72
@@ -158,6 +159,12 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
     Case VK_B
         If ctrl And shift And FocusInCodePane() Then
             Git_BlameCurrentLine
+            HandleKeyDown = True
+        End If
+
+    Case VK_L
+        If ctrl And shift And FocusInCodePane() Then
+            frmGitLog.ShowLog
             HandleKeyDown = True
         End If
 

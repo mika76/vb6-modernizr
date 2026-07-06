@@ -23,6 +23,7 @@ Form=frmRefs.frm
 Form=frmShortcuts.frm
 Form=frmBrowser.frm
 Form=frmChanges.frm
+Form=frmGitLog.frm
 Startup="(None)"
 HelpFile=""
 Title="VB6Modernizr"

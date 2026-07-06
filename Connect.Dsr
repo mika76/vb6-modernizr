@@ -86,6 +86,7 @@ Private Sub TermAddin()
     Unload frmShortcuts
     Unload frmBrowser
     Unload frmChanges
+    Unload frmGitLog
 
     If Not mMenuPopup Is Nothing Then mMenuPopup.Delete
     Set mMenuPopup = Nothing
@@ -128,6 +129,7 @@ Private Sub AddMenus()
     AddBtn "&Comment / Uncomment (Ctrl+/)", "comment", False
 
     AddBtn "Git Chan&ges / Commit... (Ctrl+Shift+G)", "gitchanges", True
+    AddBtn "Git Log... (Ctrl+Shift+L)", "gitlog", False
     AddBtn "Git Blame Line (Ctrl+Shift+B)", "gitblame", False
 
     AddBtn "Clear &Highlights", "clearhl", True

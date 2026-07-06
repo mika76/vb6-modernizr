@@ -67,9 +67,15 @@ dependency). Needs one shared piece first:
       header offset; margin bars green=added, blue=modified,
       red=deletion-below; also colored on the scrollbar. Reflects the
       SAVED file vs HEAD (unsaved editor changes not included).
-- [x] **Changes window** (M) — Ctrl+Shift+G: changed files (double-
-      click opens), commit message box + Commit All (`git add -A` +
-      `git commit -F tempfile`).
+- [x] **Changes window** (M) — Ctrl+Shift+G: staged/unstaged lists
+      from the porcelain XY codes; stage/unstage selected (multi-
+      select) or all (`git add` / `git reset -q HEAD`); Commit commits
+      the staged set (`git commit -F tempfile`); double-click opens
+      the file.
+- [x] **Log with graph** (M) — Ctrl+Shift+L: `git log --graph` with a
+      tab-separated pretty format in a monospace list (git draws the
+      graph), optional --all, click a commit for `git show --stat`
+      details.
 - [x] **Blame current line** (M) — Ctrl+Shift+B: author/date/summary
       message box via `git blame -L n,n --porcelain`.
 
