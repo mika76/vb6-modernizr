@@ -63,9 +63,13 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
     On Error Resume Next
     Select Case m.wParam
     Case VK_F
-        If GetKeyState(VK_CONTROL) < 0 And FocusInCodePane() Then
-            frmFind.ShowBar
-            HandleKeyDown = True
+        If GetKeyState(VK_CONTROL) < 0 Then
+            ' claim Ctrl+F from the code pane AND from the bar itself,
+            ' or the IDE's accelerator opens its native Find dialog
+            If FocusInCodePane() Or FocusInFindBar() Then
+                frmFind.ShowBar
+                HandleKeyDown = True
+            End If
         End If
     Case VK_F3
         If gFindBarVisible Then
@@ -83,6 +87,18 @@ End Function
 Private Function FocusInCodePane() As Boolean
     FocusInCodePane = _
         (StrComp(WndClass(GetFocus()), CLS_CODEPANE, vbTextCompare) = 0)
+End Function
+
+Private Function FocusInFindBar() As Boolean
+    On Error Resume Next
+    If Not gFindBarVisible Then Exit Function
+    Dim H As Long, hBar As Long
+    hBar = frmFind.hwnd
+    H = GetFocus()
+    Do While H <> 0
+        If H = hBar Then FocusInFindBar = True: Exit Function
+        H = GetParent(H)
+    Loop
 End Function
 
 Private Sub ScrollPane(ByVal hwnd As Long, ByVal delta As Long, _
