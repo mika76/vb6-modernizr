@@ -119,6 +119,7 @@ Private Sub tmrRefresh_Timer()
     If gTabBarVisible Then RefreshTabs False
     BM_Poll
     Git_Poll
+    Backup_Poll
     Highlight_EnsureHooks
 End Sub
 

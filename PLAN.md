@@ -93,11 +93,14 @@ marking `*.frx` etc. binary — done.
 
 ## Phase 5 — bigger swings
 
-- [ ] **Auto-backup** (M) — timer-driven zip/copy of the project folder
-      every N minutes into a `.backups` dir with rotation.
-- [ ] **Indentation guides** (L) — vertical dotted lines per indent
-      level in the WM_PAINT overlay (geometry is calibrated now, but
-      needs to repaint cleanly while typing).
+- [x] **Auto-backup** (M) — modBackup: every 10 min (only when project
+      files actually changed) a hidden PowerShell Compress-Archive
+      zips the project folder into .backups, keeping the last 20.
+      Menu: toggle (persisted) + Backup Now. Default ON.
+- [x] **Indentation guides** (L) — dotted vertical lines per TabWidth
+      step in the paint overlay; blank lines bridge between their
+      neighbors; Procedure View aware. Menu toggle, persisted,
+      default OFF (overlay repainting is a matter of taste).
 
 ## Not planned (tried/considered and rejected)
 

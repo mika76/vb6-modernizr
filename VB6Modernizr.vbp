@@ -14,6 +14,7 @@ Module=modMRU; modMRU.bas
 Module=modActions; modActions.bas
 Module=modBookmarks; modBookmarks.bas
 Module=modGit; modGit.bas
+Module=modBackup; modBackup.bas
 Class=clsMenuButton; clsMenuButton.cls
 Form=frmTabs.frm
 Form=frmFind.frm

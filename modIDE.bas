@@ -130,6 +130,13 @@ Public Declare Function GetTextExtentPoint32A Lib "gdi32" _
      lpSize As SIZEAPI) As Long
 Public Declare Function GetDeviceCaps Lib "gdi32" _
     (ByVal hdc As Long, ByVal nIndex As Long) As Long
+Public Declare Function MoveToEx Lib "gdi32" _
+    (ByVal hdc As Long, ByVal x As Long, ByVal y As Long, _
+     lpPoint As Any) As Long
+Public Declare Function LineTo Lib "gdi32" _
+    (ByVal hdc As Long, ByVal x As Long, ByVal y As Long) As Long
+Public Declare Function SetBkMode Lib "gdi32" _
+    (ByVal hdc As Long, ByVal nBkMode As Long) As Long
 
 ' --- advapi32 (read the IDE editor font from the registry) ------------
 
@@ -176,6 +183,8 @@ Public Const SPI_GETWHEELSCROLLLINES As Long = 104
 Public Const LOGPIXELSY As Long = 90
 Public Const NULL_BRUSH As Long = 5
 Public Const PS_SOLID As Long = 0
+Public Const PS_DOT As Long = 2
+Public Const BKMODE_TRANSPARENT As Long = 1
 
 Private Const HKEY_CURRENT_USER As Long = &H80000001
 Private Const KEY_READ As Long = &H20019

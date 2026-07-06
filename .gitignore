@@ -38,3 +38,6 @@ $RECYCLE.BIN/
 
 # Modernizr per-user bookmark stores
 *.bookmarks
+
+# Modernizr auto-backups
+.backups/

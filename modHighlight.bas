@@ -18,6 +18,11 @@ Option Explicit
 Private Const HL_COLOR As Long = &H157DE9      ' RGB(233,125,21) - orange
 Private Const MARK_COLOR As Long = &H157DE9
 Private Const BM_COLOR As Long = &HD77800      ' RGB(0,120,215) - blue
+Private Const GUIDE_COLOR As Long = &HD8D8D8   ' light gray
+
+' indentation guides (toggle persists via SaveSetting)
+Public gGuidesEnabled As Boolean
+Private mTabW As Long
 
 Private mHL() As MatchInfo
 Private mHLCount As Long
@@ -55,8 +60,26 @@ Public Sub Highlight_Terminate()
 End Sub
 
 Public Function Highlight_Active() As Boolean
-    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0 Or Git_MarkCount() > 0)
+    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0 Or _
+                        Git_MarkCount() > 0 Or gGuidesEnabled)
 End Function
+
+Public Sub Guides_Init()
+    On Error Resume Next
+    gGuidesEnabled = (GetSetting("VB6Modernizr", "Options", "Guides", "0") = "1")
+    mTabW = RegReadDwordHKCU("Software\Microsoft\VBA\Microsoft Visual Basic", _
+                             "TabWidth", 4)
+    If mTabW < 2 Or mTabW > 16 Then mTabW = 4
+End Sub
+
+Public Sub Guides_Toggle()
+    On Error Resume Next
+    gGuidesEnabled = Not gGuidesEnabled
+    SaveSetting "VB6Modernizr", "Options", "Guides", _
+                IIf(gGuidesEnabled, "1", "0")
+    Highlight_EnsureHooks
+    Highlight_InvalidateAll
+End Sub
 
 ' Hook every open code pane (and its vertical scrollbar) that has
 ' matches. Called after Highlight All and from the tab-bar timer so
@@ -143,6 +166,11 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     Dim loLine As Long, hiLine As Long
     GetDisplayedRange cp, loLine, hiLine
 
+    If gGuidesEnabled Then
+        PaintGuides hdc, cp, topLine, visLines, loLine, hiLine, _
+                    lineH, yTop, marginPx
+    End If
+
     Dim i As Long, y As Long
     If mHLCount > 0 Then
         Dim hPen As Long, hOldPen As Long, hOldBr As Long
@@ -159,10 +187,10 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
                    mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
                     y = yTop + (mHL(i).LineNum - topLine) * lineH + ScaleForDpi(3)
                     ' margin estimate runs one cell short in practice,
-                    ' hence Col instead of Col - 1; pad half a cell each
-                    ' side so the box does not bisect the edge characters
-                    x1 = marginPx + mHL(i).Col * mCharW - halfW
-                    x2 = x1 + mHL(i).MatchLen * mCharW + mCharW
+                    ' hence Col instead of Col - 1; the right edge gets
+                    ' an extra half cell so the last char isn't bisected
+                    x1 = marginPx + mHL(i).Col * mCharW
+                    x2 = x1 + mHL(i).MatchLen * mCharW + halfW
                     Rectangle hdc, x1 - 1, y, x2 + 1, y + lineH
                 End If
             End If
@@ -212,6 +240,89 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
 
     ReleaseDC hwnd, hdc
 End Sub
+
+' Dotted vertical lines at each indent step, drawn only inside the
+' leading whitespace; blank lines bridge between their neighbors.
+Private Sub PaintGuides(ByVal hdc As Long, ByVal cp As VBIDE.CodePane, _
+        ByVal topLine As Long, ByVal visLines As Long, _
+        ByVal loLine As Long, ByVal hiLine As Long, _
+        ByVal lineH As Long, ByVal yTop As Long, ByVal marginPx As Long)
+    On Error Resume Next
+    Dim cm As VBIDE.CodeModule
+    Set cm = cp.CodeModule
+    If cm Is Nothing Then Exit Sub
+    If mTabW < 2 Then mTabW = 4
+    If mCharW < 2 Then Exit Sub
+
+    Dim hPen As Long, hOld As Long, oldBk As Long
+    hPen = CreatePen(PS_DOT, 1, GUIDE_COLOR)
+    hOld = SelectObject(hdc, hPen)
+    oldBk = SetBkMode(hdc, BKMODE_TRANSPARENT)
+
+    Dim row As Long, ln As Long, ind As Long, c As Long
+    Dim x As Long, y As Long
+    For row = 0 To visLines - 1
+        ln = topLine + row
+        If ln > cm.CountOfLines Then Exit For
+        If ln >= loLine And ln <= hiLine Then
+            ind = EffectiveIndent(cm, ln, loLine, hiLine)
+            y = yTop + row * lineH
+            For c = mTabW To ind - 1 Step mTabW
+                ' same one-cell margin calibration as the match boxes
+                x = marginPx + (c + 2) * mCharW - mCharW \ 2
+                MoveToEx hdc, x, y, ByVal 0&
+                LineTo hdc, x, y + lineH
+            Next
+        End If
+    Next
+
+    SetBkMode hdc, oldBk
+    SelectObject hdc, hOld
+    DeleteObject hPen
+End Sub
+
+Private Function EffectiveIndent(cm As VBIDE.CodeModule, ByVal ln As Long, _
+        ByVal loLine As Long, ByVal hiLine As Long) As Long
+    Dim ind As Long, up As Long, dn As Long, i As Long
+    ind = LineIndent(cm, ln)
+    If ind >= 0 Then EffectiveIndent = ind: Exit Function
+
+    ' blank line: min indent of the nearest non-blank neighbors
+    up = 0
+    For i = ln - 1 To loLine Step -1
+        up = LineIndent(cm, i)
+        If up >= 0 Then Exit For
+        If ln - i > 60 Then up = 0: Exit For
+    Next
+    If up < 0 Then up = 0
+    dn = 0
+    For i = ln + 1 To hiLine
+        dn = LineIndent(cm, i)
+        If dn >= 0 Then Exit For
+        If i - ln > 60 Then dn = 0: Exit For
+    Next
+    If dn < 0 Then dn = 0
+    EffectiveIndent = IIf(up < dn, up, dn)
+End Function
+
+' leading whitespace width in columns; -1 for blank lines
+Private Function LineIndent(cm As VBIDE.CodeModule, ByVal ln As Long) As Long
+    On Error Resume Next
+    Dim s As String, i As Long, n As Long, ch As String
+    s = cm.lines(ln, 1)
+    If Len(Trim$(s)) = 0 Then LineIndent = -1: Exit Function
+    For i = 1 To Len(s)
+        ch = Mid$(s, i, 1)
+        If ch = " " Then
+            n = n + 1
+        ElseIf ch = vbTab Then
+            n = n + mTabW - (n Mod mTabW)
+        Else
+            Exit For
+        End If
+    Next
+    LineIndent = n
+End Function
 
 Private Sub DrawGitBar(ByVal hdc As Long, ByVal x1 As Long, ByVal Y1 As Long, _
         ByVal x2 As Long, ByVal Y2 As Long, ByVal kind As Long)

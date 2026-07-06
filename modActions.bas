@@ -28,6 +28,9 @@ Public Sub DoAction(ByVal act As String)
     Case "comment":   Edit_ToggleComment
     Case "clearhl":   Highlight_Clear
     Case "tabs":      TabBar_Toggle
+    Case "guides":    Guides_Toggle
+    Case "backup":    Backup_Toggle
+    Case "backupnow": Backup_Now True
     Case "keys":      frmShortcuts.ShowSheet
     Case "about":
         MsgBox "VB6 Modernizr 1.1" & vbCrLf & vbCrLf & _

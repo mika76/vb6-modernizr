@@ -69,6 +69,8 @@ Private Sub InitAddin()
 
     AddMenus
     Wheel_Init
+    Guides_Init
+    Backup_Init
     TabBar_Init
 End Sub
 
@@ -134,6 +136,9 @@ Private Sub AddMenus()
 
     AddBtn "Clear &Highlights", "clearhl", True
     AddBtn "Show/Hide &Tabs", "tabs", False
+    AddBtn "Indentation G&uides (toggle)", "guides", False
+    AddBtn "Auto-Backu&p (toggle)", "backup", False
+    AddBtn "Backup No&w", "backupnow", False
 
     AddBtn "&Keyboard Shortcuts... (Ctrl+Shift+/)", "keys", True
     AddBtn "&About VB6 Modernizr", "about", False
