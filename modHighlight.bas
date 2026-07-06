@@ -138,22 +138,29 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     Dim marginPx As Long
     marginPx = lineH + ScaleForDpi(6)   ' approx. indicator margin width
 
+    ' in Procedure View only the current proc's lines are displayed
+    Dim loLine As Long, hiLine As Long
+    GetDisplayedRange cp, loLine, hiLine
+
     Dim hPen As Long, hOldPen As Long, hOldBr As Long
     hPen = CreatePen(PS_SOLID, 1, HL_COLOR)
     hOldPen = SelectObject(hdc, hPen)
     hOldBr = SelectObject(hdc, GetStockObject(NULL_BRUSH))
 
-    Dim i As Long, x As Long, y As Long
+    Dim i As Long, x1 As Long, x2 As Long, y As Long, halfW As Long
+    halfW = mCharW \ 2
     For i = 0 To mHLCount - 1
         If mHL(i).Comp = compName And mHL(i).Proj = projName Then
             If mHL(i).LineNum >= topLine And _
-               mHL(i).LineNum < topLine + visLines Then
-                y = yTop + (mHL(i).LineNum - topLine) * lineH
+               mHL(i).LineNum < topLine + visLines And _
+               mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
+                y = yTop + (mHL(i).LineNum - topLine) * lineH + ScaleForDpi(3)
                 ' margin estimate runs one cell short in practice,
-                ' hence Col instead of Col - 1
-                x = marginPx + mHL(i).Col * mCharW
-                Rectangle hdc, x - 1, y, _
-                          x + mHL(i).MatchLen * mCharW + 1, y + lineH
+                ' hence Col instead of Col - 1; pad half a cell each
+                ' side so the box does not bisect the edge characters
+                x1 = marginPx + mHL(i).Col * mCharW - halfW
+                x2 = x1 + mHL(i).MatchLen * mCharW + mCharW
+                Rectangle hdc, x1 - 1, y, x2 + 1, y + lineH
             End If
         End If
     Next
@@ -177,10 +184,15 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     Set cp = PaneFromHwnd(hPane)
     If cp Is Nothing Then Exit Sub
 
-    Dim compName As String, projName As String, totalLines As Long
+    Dim compName As String, projName As String
     compName = cp.CodeModule.Parent.Name
     projName = cp.CodeModule.Parent.Collection.Parent.Name
-    totalLines = cp.CodeModule.CountOfLines
+
+    ' the scrollbar ranges over the displayed lines only: the whole
+    ' module in Full Module View, the current proc in Procedure View
+    Dim loLine As Long, hiLine As Long, totalLines As Long
+    GetDisplayedRange cp, loLine, hiLine
+    totalLines = hiLine - loLine + 1
     If totalLines < 1 Then Exit Sub
 
     Dim rc As RECT
@@ -204,8 +216,10 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     Dim i As Long, y As Long
     For i = 0 To mHLCount - 1
         If mHL(i).Comp = compName And mHL(i).Proj = projName Then
-            y = arrowH + CLng((mHL(i).LineNum - 1) / totalLines * trackH)
-            Rectangle hdc, 2, y, (rc.Right - rc.Left) - 2, y + 3
+            If mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
+                y = arrowH + CLng((mHL(i).LineNum - loLine) / totalLines * trackH)
+                Rectangle hdc, 2, y, (rc.Right - rc.Left) - 2, y + 3
+            End If
         End If
     Next
 
@@ -217,6 +231,29 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
 End Sub
 
 ' ---------------------------------------------------------------------
+
+' Range of module lines the pane is currently displaying: the whole
+' module in Full Module View, else the proc (or the declarations
+' section) that the top visible line belongs to.
+Private Sub GetDisplayedRange(ByVal cp As VBIDE.CodePane, _
+        loLine As Long, hiLine As Long)
+    On Error Resume Next
+    Dim cm As VBIDE.CodeModule
+    Set cm = cp.CodeModule
+    loLine = 1
+    hiLine = cm.CountOfLines
+    If cp.CodePaneView = vbext_cv_ProcedureView Then
+        Dim pk As vbext_ProcKind, nm As String
+        nm = cm.ProcOfLine(cp.topLine, pk)
+        If Len(nm) > 0 Then
+            loLine = cm.ProcStartLine(nm, pk)
+            hiLine = loLine + cm.ProcCountLines(nm, pk) - 1
+        Else
+            hiLine = cm.CountOfDeclarationLines
+            If hiLine < 1 Then hiLine = 1
+        End If
+    End If
+End Sub
 
 ' Bottom edge of the object/procedure combos, in pane client coords.
 Private Function EditorTopOffset(ByVal hPane As Long) As Long
