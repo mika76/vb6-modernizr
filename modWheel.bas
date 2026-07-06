@@ -23,6 +23,8 @@ Private Const VK_DOWN As Long = &H28
 Private Const VK_D As Long = &H44
 Private Const VK_F As Long = &H46
 Private Const VK_K As Long = &H4B
+Private Const VK_O As Long = &H4F
+Private Const VK_F2 As Long = &H71
 Private Const VK_F3 As Long = &H72
 Private Const VK_F12 As Long = &H7B
 Private Const VK_OEM_2 As Long = &HBF     ' the '/' key (US layouts)
@@ -111,14 +113,37 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
         End If
 
     Case VK_F3
-        If gFindBarVisible Then
+        If ctrl And FocusInCodePane() Then
+            Edit_HighlightWord            ' Ctrl+F3 = highlight word
+            HandleKeyDown = True
+        ElseIf gFindBarVisible Then
             frmFind.DoFindPublic Not shift
             HandleKeyDown = True
         End If
 
     Case VK_F12
-        If shift And FocusInCodePane() Then
-            Edit_FindAllReferences
+        If FocusInCodePane() Then
+            If shift Then
+                Edit_FindAllReferences
+            Else
+                Edit_GoToDefinition
+            End If
+            HandleKeyDown = True
+        End If
+
+    Case VK_F2
+        If FocusInCodePane() And Not shift Then   ' Shift+F2 stays native
+            If ctrl Then
+                BM_Toggle
+            Else
+                BM_NextBookmark
+            End If
+            HandleKeyDown = True
+        End If
+
+    Case VK_O
+        If ctrl And shift And FocusInCodePane() Then
+            frmBrowser.ShowBrowser
             HandleKeyDown = True
         End If
 

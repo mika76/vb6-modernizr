@@ -17,6 +17,7 @@ Option Explicit
 
 Private Const HL_COLOR As Long = &H157DE9      ' RGB(233,125,21) - orange
 Private Const MARK_COLOR As Long = &H157DE9
+Private Const BM_COLOR As Long = &HD77800      ' RGB(0,120,215) - blue
 
 Private mHL() As MatchInfo
 Private mHLCount As Long
@@ -54,7 +55,7 @@ Public Sub Highlight_Terminate()
 End Sub
 
 Public Function Highlight_Active() As Boolean
-    Highlight_Active = (mHLCount > 0)
+    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0)
 End Function
 
 ' Hook every open code pane (and its vertical scrollbar) that has
@@ -62,7 +63,7 @@ End Function
 ' newly opened panes get hooked too.
 Public Sub Highlight_EnsureHooks()
     On Error Resume Next
-    If mHLCount = 0 Then Exit Sub
+    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
     Dim cp As VBIDE.CodePane, H As Long
     For Each cp In gVBE.CodePanes
         H = CodePaneHwnd(cp)
@@ -106,7 +107,7 @@ End Sub
 
 Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     On Error Resume Next
-    If mHLCount = 0 Then Exit Sub
+    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
 
     Dim cp As VBIDE.CodePane
     Set cp = PaneFromHwnd(hwnd)
@@ -142,38 +143,64 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     Dim loLine As Long, hiLine As Long
     GetDisplayedRange cp, loLine, hiLine
 
-    Dim hPen As Long, hOldPen As Long, hOldBr As Long
-    hPen = CreatePen(PS_SOLID, 1, HL_COLOR)
-    hOldPen = SelectObject(hdc, hPen)
-    hOldBr = SelectObject(hdc, GetStockObject(NULL_BRUSH))
+    Dim i As Long, y As Long
+    If mHLCount > 0 Then
+        Dim hPen As Long, hOldPen As Long, hOldBr As Long
+        hPen = CreatePen(PS_SOLID, 1, HL_COLOR)
+        hOldPen = SelectObject(hdc, hPen)
+        hOldBr = SelectObject(hdc, GetStockObject(NULL_BRUSH))
 
-    Dim i As Long, x1 As Long, x2 As Long, y As Long, halfW As Long
-    halfW = mCharW \ 2
-    For i = 0 To mHLCount - 1
-        If mHL(i).Comp = compName And mHL(i).Proj = projName Then
-            If mHL(i).LineNum >= topLine And _
-               mHL(i).LineNum < topLine + visLines And _
-               mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
-                y = yTop + (mHL(i).LineNum - topLine) * lineH + ScaleForDpi(3)
-                ' margin estimate runs one cell short in practice,
-                ' hence Col instead of Col - 1; pad half a cell each
-                ' side so the box does not bisect the edge characters
-                x1 = marginPx + mHL(i).Col * mCharW - halfW
-                x2 = x1 + mHL(i).MatchLen * mCharW + mCharW
-                Rectangle hdc, x1 - 1, y, x2 + 1, y + lineH
+        Dim x1 As Long, x2 As Long, halfW As Long
+        halfW = mCharW \ 2
+        For i = 0 To mHLCount - 1
+            If mHL(i).Comp = compName And mHL(i).Proj = projName Then
+                If mHL(i).LineNum >= topLine And _
+                   mHL(i).LineNum < topLine + visLines And _
+                   mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
+                    y = yTop + (mHL(i).LineNum - topLine) * lineH + ScaleForDpi(3)
+                    ' margin estimate runs one cell short in practice,
+                    ' hence Col instead of Col - 1; pad half a cell each
+                    ' side so the box does not bisect the edge characters
+                    x1 = marginPx + mHL(i).Col * mCharW - halfW
+                    x2 = x1 + mHL(i).MatchLen * mCharW + mCharW
+                    Rectangle hdc, x1 - 1, y, x2 + 1, y + lineH
+                End If
             End If
-        End If
-    Next
+        Next
 
-    SelectObject hdc, hOldPen
-    SelectObject hdc, hOldBr
-    DeleteObject hPen
+        SelectObject hdc, hOldPen
+        SelectObject hdc, hOldBr
+        DeleteObject hPen
+    End If
+
+    ' bookmarks: filled blue squares in the left margin
+    Dim bmLines() As Long, nBM As Long
+    nBM = BM_LinesForComp(compName, bmLines)
+    If nBM > 0 Then
+        Dim hBmBr As Long, hBmPen As Long, hOldP2 As Long, hOldB2 As Long
+        hBmBr = CreateSolidBrush(BM_COLOR)
+        hBmPen = CreatePen(PS_SOLID, 1, BM_COLOR)
+        hOldP2 = SelectObject(hdc, hBmPen)
+        hOldB2 = SelectObject(hdc, hBmBr)
+        For i = 0 To nBM - 1
+            If bmLines(i) >= topLine And bmLines(i) < topLine + visLines And _
+               bmLines(i) >= loLine And bmLines(i) <= hiLine Then
+                y = yTop + (bmLines(i) - topLine) * lineH
+                Rectangle hdc, 2, y + 3, ScaleForDpi(10), y + lineH - 1
+            End If
+        Next
+        SelectObject hdc, hOldP2
+        SelectObject hdc, hOldB2
+        DeleteObject hBmPen
+        DeleteObject hBmBr
+    End If
+
     ReleaseDC hwnd, hdc
 End Sub
 
 Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     On Error Resume Next
-    If mHLCount = 0 Then Exit Sub
+    If mHLCount = 0 And BM_Count() = 0 Then Exit Sub
 
     ' The scrollbar is a child of the VbaWindow editor.
     Dim hPane As Long
@@ -227,6 +254,28 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     SelectObject hdc, hOldBr
     DeleteObject hPen
     DeleteObject hBr
+
+    ' bookmark marks in blue
+    Dim bmLines() As Long, nBM As Long
+    nBM = BM_LinesForComp(compName, bmLines)
+    If nBM > 0 Then
+        Dim hBmBr As Long, hBmPen As Long
+        hBmBr = CreateSolidBrush(BM_COLOR)
+        hBmPen = CreatePen(PS_SOLID, 1, BM_COLOR)
+        hOldPen = SelectObject(hdc, hBmPen)
+        hOldBr = SelectObject(hdc, hBmBr)
+        For i = 0 To nBM - 1
+            If bmLines(i) >= loLine And bmLines(i) <= hiLine Then
+                y = arrowH + CLng((bmLines(i) - loLine) / totalLines * trackH)
+                Rectangle hdc, 2, y, (rc.Right - rc.Left) - 2, y + 3
+            End If
+        Next
+        SelectObject hdc, hOldPen
+        SelectObject hdc, hOldBr
+        DeleteObject hBmPen
+        DeleteObject hBmBr
+    End If
+
     ReleaseDC hwnd, hdc
 End Sub
 

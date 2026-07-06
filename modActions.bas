@@ -12,6 +12,12 @@ Public Sub DoAction(ByVal act As String)
     Case "findbar":   frmFind.ShowBar
     Case "findfiles": frmFindFiles.ShowDialog
     Case "refs":      Edit_FindAllReferences
+    Case "def":       Edit_GoToDefinition
+    Case "hlword":    Edit_HighlightWord
+    Case "browser":   frmBrowser.ShowBrowser
+    Case "bmtoggle":  BM_Toggle
+    Case "bmnext":    BM_NextBookmark
+    Case "bmclear":   BM_ClearAll
     Case "dup":       Edit_DuplicateLines
     Case "moveup":    Edit_MoveLinesUp
     Case "movedown":  Edit_MoveLinesDown

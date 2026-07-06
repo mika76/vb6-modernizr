@@ -35,3 +35,6 @@ $RECYCLE.BIN/
 *.exp
 *.lib
 *.exp
+
+# Modernizr per-user bookmark stores
+*.bookmarks

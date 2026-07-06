@@ -111,6 +111,13 @@ Private Sub AddMenus()
     AddBtn "&Find / Replace Bar (Ctrl+F)", "findbar", False
     AddBtn "Find in Fi&les...", "findfiles", False
     AddBtn "Find All &References (Shift+F12)", "refs", False
+    AddBtn "&Go to Definition (F12)", "def", False
+    AddBtn "Highlight Word at Cursor (Ctrl+F3)", "hlword", False
+    AddBtn "Code Bro&wser... (Ctrl+Shift+O)", "browser", False
+
+    AddBtn "Toggle Book&mark (Ctrl+F2)", "bmtoggle", True
+    AddBtn "Next Bookmark (F2)", "bmnext", False
+    AddBtn "Clear All Bookmarks", "bmclear", False
 
     AddBtn "&Duplicate Line (Ctrl+D)", "dup", True
     AddBtn "Move Lines &Up (Alt+Up)", "moveup", False

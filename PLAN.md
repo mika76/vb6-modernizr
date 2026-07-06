@@ -33,15 +33,20 @@ M (a day-ish), L (multiple days). Check items off as they land.
 
 ## Phase 2 — navigation
 
-- [ ] **Highlight word under cursor** (S) — Ctrl+W (or automatic on
-      double-click): run Highlight All on the current word.
-- [ ] **Go to definition** F12 (M) — regex scan of project components
-      for `Sub|Function|Property|Const|Type|Enum <word>`, jump to hit.
-      (Shift+F12 references: done, see Phase 1.)
-- [ ] **Persistent bookmarks** (M) — F2 toggle, stored per-project in
-      an `.ini` beside the `.vbp`; second color in the scrollbar marks.
-- [ ] **TODO / procedure browser** (M) — dockable list (Find in Files
-      window pattern) of procs and `' TODO:` comments, click to jump.
+- [x] **Highlight word under cursor** (S) — Ctrl+F3 (Ctrl+W is native
+      Edit Watch); runs Highlight All on the current word, project-wide.
+- [x] **Go to definition** F12 (M) — regex scan for definition-shaped
+      lines (procs/props/consts/types/enums/events/declares/vars);
+      one hit jumps, several open the results window. Native Shift+F2
+      remains untouched as a fallback.
+- [x] **Persistent bookmarks** (M) — Ctrl+F2 toggle, F2 next (F2
+      overrides Object Browser only while focus is in a code window;
+      Shift+F2 stays native). Stored in "<project>.vbp.bookmarks"
+      beside the .vbp with a line-text snapshot so bookmarks re-find
+      their line after edits. Blue margin squares + scrollbar marks.
+- [x] **TODO / procedure browser** (M) — Ctrl+Shift+O (frmBrowser):
+      procedures or TODO comments of the active project with live
+      filter; double-click / Enter jumps.
 
 ## Phase 3 — git integration
 

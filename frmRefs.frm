@@ -43,7 +43,8 @@ Private Const LB_SETHORIZONTALEXTENT As Long = &H194
 Private mRefs() As MatchInfo
 Private mCount As Long
 
-Public Sub ShowRefs(ByVal word As String)
+Public Sub ShowRefs(ByVal word As String, _
+        Optional ByVal verb As String = "References to")
     On Error Resume Next
     Load Me
     SendMessageA lstRefs.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
@@ -52,14 +53,14 @@ Public Sub ShowRefs(ByVal word As String)
     mRefs = gMatches
     mCount = gMatchCount
 
-    Me.Caption = "References to '" & word & "'"
+    Me.Caption = verb & " '" & word & "'"
     lstRefs.Clear
     Dim i As Long
     For i = 0 To mCount - 1
         lstRefs.AddItem mRefs(i).Comp & "(" & mRefs(i).LineNum & "): " & _
                         Left$(Trim$(mRefs(i).LineText), 250)
     Next
-    lblStatus.Caption = mCount & " reference(s) in the active project."
+    lblStatus.Caption = mCount & " item(s) in the active project."
 
     Me.Show vbModeless
     If lstRefs.ListCount > 0 Then lstRefs.ListIndex = 0

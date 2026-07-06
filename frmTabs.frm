@@ -102,6 +102,7 @@ Private Sub tmrRefresh_Timer()
     On Error Resume Next
     If gVBE Is Nothing Then Exit Sub
     If gTabBarVisible Then RefreshTabs False
+    BM_Poll
     Highlight_EnsureHooks
 End Sub
 

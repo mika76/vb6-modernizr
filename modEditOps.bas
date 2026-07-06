@@ -160,3 +160,88 @@ Public Sub Edit_FindAllReferences()
 
     frmRefs.ShowRefs w
 End Sub
+
+' Ctrl+F3: Highlight All on the word under the cursor.
+Public Sub Edit_HighlightWord()
+    On Error Resume Next
+    Dim w As String
+    w = WordUnderCursor()
+    If Len(w) = 0 Then Beep: Exit Sub
+
+    gOptRegex = False
+    gOptWhole = True
+    gOptCase = False
+    If Not PrepareSearch(w) Then Exit Sub
+    If CollectMatches(scProject, w) = 0 Then Beep: Exit Sub
+    Highlight_SetFromSearch
+End Sub
+
+' F12: jump to the definition of the word under the cursor. One hit
+' jumps straight there; several open the results window.
+Public Sub Edit_GoToDefinition()
+    On Error Resume Next
+    Dim w As String
+    w = WordUnderCursor()
+    If Len(w) = 0 Then Beep: Exit Sub
+
+    ' definition-shaped lines: procs/types/consts/events, declared
+    ' variables, and bare "Public X As ..." module-level fields
+    Dim rx As Object
+    Set rx = CreateObject("VBScript.RegExp")
+    rx.IgnoreCase = True
+    rx.Pattern = _
+        "(^[ \t]*(?:(?:public|private|friend|global|static)[ \t]+)*" & _
+        "(?:(?:declare[ \t]+(?:function|sub)|sub|function|" & _
+        "property[ \t]+(?:get|let|set)|const|type|enum|event|dim|" & _
+        "withevents)[ \t]+)+" & w & "\b)" & _
+        "|(^[ \t]*(?:public|private|global|static|dim)[ \t]+" & w & _
+        "[ \t]+as\b)"
+
+    ' word-boundary column lookup via the plain search engine
+    gOptRegex = False
+    gOptWhole = True
+    gOptCase = False
+    If Not PrepareSearch(w) Then Exit Sub
+
+    gMatchCount = 0
+    ReDim gMatches(0 To 16)
+
+    Dim proj As VBIDE.VBProject, comp As VBIDE.VBComponent
+    Dim cm As VBIDE.CodeModule
+    Dim i As Long, s As String
+    Dim cols() As Long, lens() As Long
+    Set proj = gVBE.ActiveVBProject
+    If proj Is Nothing Then Exit Sub
+
+    For Each comp In proj.VBComponents
+        Set cm = comp.CodeModule
+        For i = 1 To cm.CountOfLines
+            s = cm.lines(i, 1)
+            If rx.Test(s) Then
+                If FindInLine(s, w, cols, lens) > 0 Then
+                    If gMatchCount > UBound(gMatches) Then
+                        ReDim Preserve gMatches(0 To gMatchCount * 2)
+                    End If
+                    With gMatches(gMatchCount)
+                        .Proj = proj.Name
+                        .Comp = comp.Name
+                        .LineNum = i
+                        .Col = cols(0)
+                        .MatchLen = lens(0)
+                        .LineText = s
+                    End With
+                    gMatchCount = gMatchCount + 1
+                End If
+            End If
+        Next
+    Next
+
+    Select Case gMatchCount
+    Case 0
+        Beep
+    Case 1
+        GoToMatch gMatches(0)
+    Case Else
+        frmRefs.ShowRefs w, "Definitions of"
+    End Select
+End Sub
