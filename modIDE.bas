@@ -94,6 +94,11 @@ Public Declare Function GetSystemMetrics Lib "user32" (ByVal nIndex As Long) As 
 Public Declare Function SystemParametersInfoA Lib "user32" _
     (ByVal uAction As Long, ByVal uParam As Long, lpvParam As Any, ByVal fuWinIni As Long) As Long
 
+Public Declare Function ShowWindow Lib "user32" _
+    (ByVal hwnd As Long, ByVal nCmdShow As Long) As Long
+Public Const SW_HIDE As Long = 0
+Public Const SW_SHOWNOACTIVATE As Long = 4
+
 Public Declare Function GetKeyState Lib "user32" (ByVal nVirtKey As Long) As Integer
 Public Declare Function GetFocus Lib "user32" () As Long
 Public Declare Function SetFocusAPI Lib "user32" Alias "SetFocus" _
@@ -148,6 +153,8 @@ Public Const WM_NULL As Long = &H0
 Public Const WM_DESTROY As Long = &H2
 Public Const WM_PAINT As Long = &HF
 Public Const WM_KEYDOWN As Long = &H100
+Public Const WM_KEYUP As Long = &H101
+Public Const WM_SYSKEYDOWN As Long = &H104
 Public Const WM_VSCROLL As Long = &H115
 Public Const WM_HSCROLL As Long = &H114
 Public Const WM_MOUSEWHEEL As Long = &H20A

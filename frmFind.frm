@@ -383,20 +383,7 @@ Private Sub SelectMatch(ByVal idx As Long)
     Dim m As MatchInfo
     m = gMatches(idx)
 
-    Dim cm As VBIDE.CodeModule, cp As VBIDE.CodePane
-    Set cm = FindModule(m.proj, m.comp)
-    If cm Is Nothing Then Exit Sub
-    Set cp = cm.CodePane                 ' opens the pane if needed
-    cp.Show
-    cp.SetSelection m.lineNum, m.col, m.lineNum, m.col + m.MatchLen
-
-    If m.lineNum < cp.topLine Or _
-       m.lineNum >= cp.topLine + cp.CountOfVisibleLines Then
-        Dim t As Long
-        t = m.lineNum - cp.CountOfVisibleLines \ 2
-        If t < 1 Then t = 1
-        cp.topLine = t
-    End If
+    GoToMatch m
 
     lblStatus.Caption = "Match " & (idx + 1) & " of " & gMatchCount & _
                         "  (" & m.comp & ", line " & m.lineNum & ")"

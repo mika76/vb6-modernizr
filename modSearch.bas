@@ -116,9 +116,28 @@ Public Function IsWholeWordAt(ByVal s As String, ByVal pos As Long, _
     IsWholeWordAt = ok
 End Function
 
-Private Function IsWordChar(ByVal ch As String) As Boolean
+Public Function IsWordChar(ByVal ch As String) As Boolean
     IsWordChar = (ch Like "[A-Za-z0-9_]")
 End Function
+
+' Open the match's module, select it and scroll it into view.
+Public Sub GoToMatch(m As MatchInfo)
+    On Error Resume Next
+    Dim cm As VBIDE.CodeModule, cp As VBIDE.CodePane
+    Set cm = FindModule(m.Proj, m.Comp)
+    If cm Is Nothing Then Exit Sub
+    Set cp = cm.CodePane                 ' opens the pane if needed
+    cp.Show
+    cp.SetSelection m.LineNum, m.Col, m.LineNum, m.Col + m.MatchLen
+    If m.LineNum < cp.topLine Or _
+       m.LineNum >= cp.topLine + cp.CountOfVisibleLines Then
+        Dim t As Long
+        t = m.LineNum - cp.CountOfVisibleLines \ 2
+        If t < 1 Then t = 1
+        cp.topLine = t
+    End If
+    cp.Window.SetFocus
+End Sub
 
 ' ---------------------------------------------------------------------
 '  Scope enumeration + collection

@@ -1,0 +1,23 @@
+# VB6 refuses to load LF sources - force CRLF in the working tree
+*.bas text eol=crlf
+*.cls text eol=crlf
+*.frm text eol=crlf
+*.ctl text eol=crlf
+*.dob text eol=crlf
+*.pag text eol=crlf
+*.dsr text eol=crlf
+*.vbp text eol=crlf
+*.vbg text eol=crlf
+*.vbw text eol=crlf
+
+# binary companions - never normalize or diff as text
+*.frx binary
+*.ctx binary
+*.dsx binary
+*.dox binary
+*.pgx binary
+*.dll binary
+*.ocx binary
+*.exe binary
+
+*.md text

@@ -73,6 +73,7 @@ Private mTabCount As Long        ' number of drawn (visible) tabs
 Private mScroll As Long          ' first visible tab (1-based)
 
 Private mCtxIdx As Long          ' tab targeted by the context menu
+Private mLastAct As String       ' last active-window key fed to MRU
 
 ' ---------------------------------------------------------------------
 
@@ -131,6 +132,10 @@ Private Sub RefreshTabs(ByVal force As Boolean)
         End If
     End If
     sig = sig & "#" & actCap
+    If Len(actCap) > 0 And actCap <> mLastAct Then
+        mLastAct = actCap
+        MRU_Touch actCap
+    End If
 
     If sig = mSig And Not force Then Exit Sub
     mSig = sig

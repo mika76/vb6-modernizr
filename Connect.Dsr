@@ -1,5 +1,5 @@
 VERSION 5.00
-Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect 
+Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect
    ClientHeight    =   6000
    ClientLeft      =   1740
    ClientTop       =   1545
@@ -14,7 +14,6 @@ Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect
    LoadName        =   "Startup"
    LoadBehavior    =   1
    RegLocation     =   "HKEY_CURRENT_USER\Software\Microsoft\Visual Basic\6.0"
-   CmdLineSupport  =   -1  'True
 End
 Attribute VB_Name = "Connect"
 Attribute VB_GlobalNameSpace = False
@@ -25,29 +24,15 @@ Option Explicit
 
 ' =====================================================================
 '  VB6 Modernizr - add-in entry point
-'  Wires the add-in into the IDE: menu items, tab bar, wheel hook.
+'  Wires the add-in into the IDE: menu, tab bar, message hook.
+'  Menu clicks are dispatched by action name via clsMenuButton ->
+'  modActions.DoAction, so adding a command is a single AddBtn line.
 ' =====================================================================
 
 Public VBInstance As VBIDE.VBE
 
 Private mMenuPopup As Object          ' Office CommandBarPopup (late bound)
-Private mBtnFind As Object
-Private mBtnFindFiles As Object
-Private mBtnTabs As Object
-Private mBtnClearHL As Object
-Private mBtnAbout As Object
-
-Private WithEvents evtFind As VBIDE.CommandBarEvents
-Attribute evtFind.VB_VarHelpID = -1
-Private WithEvents evtFindFiles As VBIDE.CommandBarEvents
-Attribute evtFindFiles.VB_VarHelpID = -1
-Private WithEvents evtTabs As VBIDE.CommandBarEvents
-Attribute evtTabs.VB_VarHelpID = -1
-Private WithEvents evtClearHL As VBIDE.CommandBarEvents
-Attribute evtClearHL.VB_VarHelpID = -1
-Private WithEvents evtAbout As VBIDE.CommandBarEvents
-Attribute evtAbout.VB_VarHelpID = -1
-
+Private mButtons As Collection        ' of clsMenuButton (event sinks)
 Private mConnected As Boolean
 
 ' ---------------------------------------------------------------------
@@ -96,16 +81,20 @@ Private Sub TermAddin()
 
     Unload frmFind
     Unload frmFindFiles
+    Unload frmRefs
+    Unload frmSwitcher
+    Unload frmShortcuts
 
     If Not mMenuPopup Is Nothing Then mMenuPopup.Delete
     Set mMenuPopup = Nothing
-    Set evtFind = Nothing: Set evtFindFiles = Nothing
-    Set evtTabs = Nothing: Set evtClearHL = Nothing: Set evtAbout = Nothing
+    Set mButtons = Nothing
 
     Set gVBE = Nothing
     Set VBInstance = Nothing
     mConnected = False
 End Sub
+
+' ---------------------------------------------------------------------
 
 Private Sub AddMenus()
     On Error Resume Next
@@ -113,69 +102,38 @@ Private Sub AddMenus()
     Set cbMenuBar = VBInstance.CommandBars("Menu Bar")
     If cbMenuBar Is Nothing Then Exit Sub
 
-    ' 10 = msoControlPopup, 1 = msoControlButton; Temporary:=True
+    Set mButtons = New Collection
+
+    ' 10 = msoControlPopup; Temporary:=True
     Set mMenuPopup = cbMenuBar.Controls.Add(10, , , , True)
     mMenuPopup.Caption = "M&odernizr"
 
-    Set mBtnFind = mMenuPopup.Controls.Add(1)
-    mBtnFind.Caption = "&Find / Replace Bar (Ctrl+F)"
-    Set evtFind = VBInstance.Events.CommandBarEvents(mBtnFind)
+    AddBtn "&Find / Replace Bar (Ctrl+F)", "findbar", False
+    AddBtn "Find in Fi&les...", "findfiles", False
+    AddBtn "Find All &References (Shift+F12)", "refs", False
 
-    Set mBtnFindFiles = mMenuPopup.Controls.Add(1)
-    mBtnFindFiles.Caption = "Find in Fi&les..."
-    Set evtFindFiles = VBInstance.Events.CommandBarEvents(mBtnFindFiles)
+    AddBtn "&Duplicate Line (Ctrl+D)", "dup", True
+    AddBtn "Move Lines &Up (Alt+Up)", "moveup", False
+    AddBtn "Move Lines Do&wn (Alt+Down)", "movedown", False
+    AddBtn "Delete Li&nes (Ctrl+Shift+K)", "delline", False
+    AddBtn "&Comment / Uncomment (Ctrl+/)", "comment", False
 
-    Set mBtnClearHL = mMenuPopup.Controls.Add(1)
-    mBtnClearHL.Caption = "&Clear Highlights"
-    Set evtClearHL = VBInstance.Events.CommandBarEvents(mBtnClearHL)
+    AddBtn "Clear &Highlights", "clearhl", True
+    AddBtn "Show/Hide &Tabs", "tabs", False
 
-    Set mBtnTabs = mMenuPopup.Controls.Add(1)
-    mBtnTabs.Caption = "Show/Hide &Tabs"
-    mBtnTabs.BeginGroup = True
-    Set evtTabs = VBInstance.Events.CommandBarEvents(mBtnTabs)
-
-    Set mBtnAbout = mMenuPopup.Controls.Add(1)
-    mBtnAbout.Caption = "&About VB6 Modernizr"
-    mBtnAbout.BeginGroup = True
-    Set evtAbout = VBInstance.Events.CommandBarEvents(mBtnAbout)
+    AddBtn "&Keyboard Shortcuts... (Ctrl+Shift+/)", "keys", True
+    AddBtn "&About VB6 Modernizr", "about", False
 End Sub
 
-' ---------------------------------------------------------------------
-
-Private Sub evtFind_Click(ByVal CommandBarControl As Object, _
-        handled As Boolean, CancelDefault As Boolean)
+Private Sub AddBtn(ByVal cap As String, ByVal act As String, _
+        ByVal group As Boolean)
     On Error Resume Next
-    frmFind.ShowBar
-    handled = True
-End Sub
-
-Private Sub evtFindFiles_Click(ByVal CommandBarControl As Object, _
-        handled As Boolean, CancelDefault As Boolean)
-    On Error Resume Next
-    frmFindFiles.ShowDialog
-    handled = True
-End Sub
-
-Private Sub evtTabs_Click(ByVal CommandBarControl As Object, _
-        handled As Boolean, CancelDefault As Boolean)
-    On Error Resume Next
-    TabBar_Toggle
-    handled = True
-End Sub
-
-Private Sub evtClearHL_Click(ByVal CommandBarControl As Object, _
-        handled As Boolean, CancelDefault As Boolean)
-    On Error Resume Next
-    Highlight_Clear
-    handled = True
-End Sub
-
-Private Sub evtAbout_Click(ByVal CommandBarControl As Object, _
-        handled As Boolean, CancelDefault As Boolean)
-    On Error Resume Next
-    MsgBox "VB6 Modernizr 1.0" & vbCrLf & vbCrLf & _
-           "MDI window tabs, Find/Replace with match highlighting," & vbCrLf & _
-           "Find in Files, and mouse wheel scrolling for the VB6 IDE.", _
-           vbInformation, "VB6 Modernizr"
-    handled = True
+    Dim btn As Object, mb As clsMenuButton
+    Set btn = mMenuPopup.Controls.Add(1)      ' msoControlButton
+    btn.Caption = cap
+    If group Then btn.BeginGroup = True
+    Set mb = New clsMenuButton
+    mb.Action = act
+    Set mb.evt = VBInstance.Events.CommandBarEvents(btn)
+    mButtons.Add mb
 End Sub
