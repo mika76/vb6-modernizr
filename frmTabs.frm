@@ -186,6 +186,9 @@ TryLayout:
     x = 2
     mTabCount = 0
     fits = False
+    ' measure with the bold font: the active tab draws bold, and using
+    ' one width for both states keeps tabs from resizing on activation
+    Me.FontBold = True
     For i = mScroll To n
         cap = TabCaption(mWins(i))
         tw = Me.TextWidth(cap) + 26
@@ -199,6 +202,7 @@ TryLayout:
         If i = mActiveIdx Then fits = True
         x = x + tw + 1
     Next
+    Me.FontBold = False
     ' active tab off the right edge: scroll right and retry
     If mActiveIdx > 0 And Not fits And mScroll < mActiveIdx Then
         mScroll = mScroll + 1
@@ -242,8 +246,9 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     gc = IIf(w.Type = vbext_wt_CodeWindow, COLOR_CODE, COLOR_DESIGN)
     Me.Line (l + 6, gy - 3)-(l + 12, gy + 3), gc, BF
 
-    ' caption, clipped to the tab
+    ' caption, clipped to the tab; measure in the style it draws in
     Dim cap As String
+    Me.FontBold = active
     cap = TabCaption(w)
     Do While Me.TextWidth(cap) > (r - l - 24) And Len(cap) > 1
         cap = Left$(cap, Len(cap) - 1)
@@ -252,7 +257,6 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
 
     Me.CurrentX = l + 16
     Me.CurrentY = (H - Me.TextHeight("X")) \ 2 + 1
-    Me.FontBold = active
     Me.ForeColor = vbButtonText
     Me.Print cap
     Me.FontBold = False

@@ -80,24 +80,11 @@ Private Sub HookPaneScrollbar(ByVal hPane As Long)
     ' The editor's scrollbars are child "ScrollBar" controls of the
     ' VbaWindow itself.
     Dim hSB As Long
-    hSB = FindVScrollBar(hPane)
+    hSB = FindVScrollBarChild(hPane)
     If hSB <> 0 Then
         If Not Hook_IsHooked(hSB) Then Hook_Window hSB, hpScrollBar
     End If
 End Sub
-
-Private Function FindVScrollBar(ByVal hParent As Long) As Long
-    Dim H As Long, rc As RECT
-    H = FindWindowEx(hParent, 0, "ScrollBar", vbNullString)
-    Do While H <> 0
-        GetWindowRect H, rc
-        If (rc.Bottom - rc.Top) > (rc.Right - rc.Left) Then  ' vertical
-            FindVScrollBar = H
-            Exit Function
-        End If
-        H = FindWindowEx(hParent, H, "ScrollBar", vbNullString)
-    Loop
-End Function
 
 Public Sub Highlight_InvalidateAll()
     On Error Resume Next
@@ -107,7 +94,7 @@ Public Sub Highlight_InvalidateAll()
         If H <> 0 Then
             InvalidateRect H, 0, 1
             Dim hSB As Long
-            hSB = FindVScrollBar(H)
+            hSB = FindVScrollBarChild(H)
             If hSB <> 0 Then InvalidateRect hSB, 0, 0
         End If
     Next
@@ -162,7 +149,9 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
             If mHL(i).LineNum >= topLine And _
                mHL(i).LineNum < topLine + visLines Then
                 y = yTop + (mHL(i).LineNum - topLine) * lineH
-                x = marginPx + (mHL(i).Col - 1) * mCharW
+                ' margin estimate runs one cell short in practice,
+                ' hence Col instead of Col - 1
+                x = marginPx + mHL(i).Col * mCharW
                 Rectangle hdc, x - 1, y, _
                           x + mHL(i).MatchLen * mCharW + 1, y + lineH
             End If

@@ -96,7 +96,17 @@ Private Sub ScrollPane(ByVal hwnd As Long, ByVal delta As Long, _
     If n < 1 Then n = 1
     cmd = IIf(delta > 0, SB_LINEUP, SB_LINEDOWN)
     msg = IIf(horizontal, WM_HSCROLL, WM_VSCROLL)
+
+    ' The editor only honors WM_V/HSCROLL when lParam carries its own
+    ' scrollbar control's hwnd (same trick as Microsoft's wheel fix).
+    Dim hSB As Long
+    If horizontal Then
+        hSB = FindHScrollBarChild(hwnd)
+    Else
+        hSB = FindVScrollBarChild(hwnd)
+    End If
+
     For i = 1 To n
-        SendMessageA hwnd, msg, cmd, 0
+        SendMessageA hwnd, msg, cmd, hSB
     Next
 End Sub

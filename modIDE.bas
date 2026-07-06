@@ -261,6 +261,34 @@ Public Function CodePaneHwnd(ByVal cp As VBIDE.CodePane) As Long
     End If
 End Function
 
+' The editor's scrollbars are child "ScrollBar" controls; tell them
+' apart by shape.
+Public Function FindVScrollBarChild(ByVal hParent As Long) As Long
+    Dim H As Long, rc As RECT
+    H = FindWindowEx(hParent, 0, "ScrollBar", vbNullString)
+    Do While H <> 0
+        GetWindowRect H, rc
+        If (rc.Bottom - rc.Top) > (rc.Right - rc.Left) Then
+            FindVScrollBarChild = H
+            Exit Function
+        End If
+        H = FindWindowEx(hParent, H, "ScrollBar", vbNullString)
+    Loop
+End Function
+
+Public Function FindHScrollBarChild(ByVal hParent As Long) As Long
+    Dim H As Long, rc As RECT
+    H = FindWindowEx(hParent, 0, "ScrollBar", vbNullString)
+    Do While H <> 0
+        GetWindowRect H, rc
+        If (rc.Right - rc.Left) > (rc.Bottom - rc.Top) Then
+            FindHScrollBarChild = H
+            Exit Function
+        End If
+        H = FindWindowEx(hParent, H, "ScrollBar", vbNullString)
+    Loop
+End Function
+
 ' --- registry helpers (IDE editor font) --------------------------------
 
 Public Function RegReadStringHKCU(ByVal sKey As String, ByVal sValue As String, _

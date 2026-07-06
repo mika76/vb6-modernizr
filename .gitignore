@@ -32,3 +32,6 @@ $RECYCLE.BIN/
 *.pdb
 *.tlh
 *.tli
+*.exp
+*.lib
+*.exp
