@@ -75,6 +75,9 @@ so the IDE never blocks. Status refreshes every ~5 s.
   no need for Microsoft's separate MouseWheel fix.
 - **Indentation guides** (menu toggle, default off): dotted vertical
   lines per indent step, bridging blank lines.
+
+![indentation guides](images/indentation-guides.png)
+  
 - **Auto-backup** (menu toggle, default on): every 10 minutes, if
   project files changed, zips the project folder to
   `.backups\backup_<timestamp>.zip` (keeps the last 20) via a hidden
