@@ -20,6 +20,8 @@ is modified vs git HEAD. The `▼` button lists every window when tabs
 overflow; the right end shows the current git branch (`master *` when
 dirty).
 
+![tabs panel](images/tabs.png)
+
 ### Find / replace bar
 A VS-style bar docked above the code area (Ctrl+F, prefilled from the
 selection). Match case / whole word / regular expressions (with `$1`
@@ -27,6 +29,8 @@ group references in replacements); scopes: current module, selection,
 open modules, whole project. Enter/Shift+Enter and F3/Shift+F3
 navigate; Esc closes. **Highlight** outlines every match in the editor
 and marks it on the vertical scrollbar (orange).
+
+![find and replace panel](images/find-replace-panel-highlight.png)
 
 ### Find in Files
 Scans the codebase on disk — including designer sections of
@@ -79,6 +83,8 @@ so the IDE never blocks. Status refreshes every ~5 s.
 ### Discoverability
 Every command sits in the **Modernizr** menu with its shortcut in the
 caption, and **Ctrl+Shift+/** opens a keyboard cheat sheet.
+
+![menu](images/menu.png)
 
 ## Keyboard shortcuts
 
