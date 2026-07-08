@@ -38,6 +38,8 @@ Scans the codebase on disk — including designer sections of
 any folder. Double-click jumps to the exact line (header offset
 compensated); files outside the loaded project group open in Notepad.
 
+![find in files](images/find-in-files.png)
+
 ### Navigation
 Go to Definition (F12; several candidates open a results list),
 Find All References (Shift+F12), Highlight Word at Cursor (Ctrl+F3),
