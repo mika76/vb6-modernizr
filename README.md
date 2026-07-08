@@ -79,7 +79,7 @@ so the IDE never blocks. Status refreshes every ~5 s.
 - **Indentation guides** (menu toggle, default off): dotted vertical
   lines per indent step, bridging blank lines.
 
-  ![indentation guides](images/indentation-guides.png)
+![indentation guides](images/indentation-guides.png)
 
   
 - **Line numbers** (menu toggle, default off): a real gutter strip is
