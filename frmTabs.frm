@@ -119,6 +119,7 @@ Private Sub tmrRefresh_Timer()
     Git_Poll
     Backup_Poll
     Highlight_EnsureHooks
+    If gLineNumsEnabled Then frmGutter.Poll
 End Sub
 
 ' external state (git) changed: repaint on the next tick

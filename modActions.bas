@@ -29,6 +29,7 @@ Public Sub Menu_SyncToggles()
     On Error Resume Next
     SetToggleState "tabs", gTabBarVisible
     SetToggleState "guides", gGuidesEnabled
+    SetToggleState "linenums", gLineNumsEnabled
     SetToggleState "backup", Backup_Enabled()
 End Sub
 
@@ -64,6 +65,7 @@ Public Sub DoAction(ByVal act As String)
     Case "clearhl":   Highlight_Clear
     Case "tabs":      TabBar_Toggle
     Case "guides":    Guides_Toggle
+    Case "linenums":  LineNums_Toggle
     Case "backup":    Backup_Toggle
     Case "backupnow": Backup_Now True
     Case "keys":      frmShortcuts.ShowSheet

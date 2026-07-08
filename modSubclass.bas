@@ -24,9 +24,12 @@ Private mPurpose(1 To MAX_HOOKS) As Long
 
 ' Reserved-strip geometry shared with the MDIClient handler
 Public gReserveActive As Boolean
-Public gReservePx As Long
-Private mAdjY As Long           ' last y/cy we produced, to avoid
+Public gReservePx As Long       ' strip above the MDI client (bars)
+Public gReserveLeftPx As Long   ' strip left of the MDI client (gutter)
+Private mAdjY As Long           ' last rect we produced, to avoid
 Private mAdjCY As Long          ' shrinking an already-shrunk rect twice
+Private mAdjX As Long
+Private mAdjCX As Long
 
 ' ---------------------------------------------------------------------
 
@@ -109,6 +112,7 @@ Private Function SubWndProc(ByVal hwnd As Long, ByVal uMsg As Long, _
         Select Case uMsg
         Case WM_PAINT
             Highlight_PaintPane hwnd
+            If gLineNumsEnabled Then frmGutter.Poll
         Case WM_VSCROLL, WM_MOUSEWHEEL
             ' vertical scrolling copies pixels, and everything we draw
             ' is line-anchored, so it rides along correctly; drawing
@@ -122,6 +126,7 @@ Private Function SubWndProc(ByVal hwnd As Long, ByVal uMsg As Long, _
                 hSB = FindVScrollBarChild(hwnd)
                 If hSB <> 0 Then Highlight_PaintScrollbar hSB
             End If
+            If gLineNumsEnabled Then frmGutter.Poll
         Case WM_HSCROLL
             ' horizontal scrolling breaks the column-1 assumption the
             ' boxes are placed with - here a full repaint is needed
@@ -172,17 +177,25 @@ Private Sub AdjustMDIPos(ByVal lParam As Long)
     If (wp.flags And SWP_NOMOVE) <> 0 Then Exit Sub
     ' Skip if this is the rect we already adjusted (someone re-applied
     ' the current position) - prevents cumulative shrinking.
-    If wp.y = mAdjY And wp.cy = mAdjCY Then Exit Sub
+    If wp.y = mAdjY And wp.cy = mAdjCY And _
+       wp.x = mAdjX And wp.cx = mAdjCX Then Exit Sub
     If wp.cy < gReservePx + 120 Then Exit Sub
+    If wp.cx < gReserveLeftPx + 120 Then Exit Sub
 
     wp.y = wp.y + gReservePx
     wp.cy = wp.cy - gReservePx
+    wp.x = wp.x + gReserveLeftPx
+    wp.cx = wp.cx - gReserveLeftPx
     mAdjY = wp.y
     mAdjCY = wp.cy
+    mAdjX = wp.x
+    mAdjCX = wp.cx
     CopyMemory ByVal lParam, wp, Len(wp)
 End Sub
 
 Public Sub ResetMDIAdjustGuard()
     mAdjY = -99999
     mAdjCY = -99999
+    mAdjX = -99999
+    mAdjCX = -99999
 End Sub

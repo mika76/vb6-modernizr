@@ -94,6 +94,8 @@ Public Declare Function GetClientRect Lib "user32" _
     (ByVal hwnd As Long, lpRect As RECT) As Long
 Public Declare Function ScreenToClient Lib "user32" _
     (ByVal hwnd As Long, lpPoint As POINTAPI) As Long
+Public Declare Function ClientToScreen Lib "user32" _
+    (ByVal hwnd As Long, lpPoint As POINTAPI) As Long
 Public Declare Function SendMessageA Lib "user32" _
     (ByVal hwnd As Long, ByVal wMsg As Long, ByVal wParam As Long, ByVal lParam As Long) As Long
 Public Declare Function IsWindow Lib "user32" (ByVal hwnd As Long) As Long
@@ -199,6 +201,11 @@ Public Declare Function LineTo Lib "gdi32" _
     (ByVal hdc As Long, ByVal x As Long, ByVal y As Long) As Long
 Public Declare Function SetBkMode Lib "gdi32" _
     (ByVal hdc As Long, ByVal nBkMode As Long) As Long
+Public Declare Function SetTextColor Lib "gdi32" _
+    (ByVal hdc As Long, ByVal crColor As Long) As Long
+Public Declare Function TextOutA Lib "gdi32" _
+    (ByVal hdc As Long, ByVal x As Long, ByVal y As Long, _
+     ByVal lpString As String, ByVal nCount As Long) As Long
 
 ' --- advapi32 (read the IDE editor font from the registry) ------------
 
@@ -217,6 +224,7 @@ Public Const GWL_WNDPROC As Long = -4
 Public Const GWL_HWNDPARENT As Long = -8
 Public Const WS_CHILD As Long = &H40000000
 Public Const WS_POPUP As Long = &H80000000
+Public Const WS_MAXIMIZE As Long = &H1000000
 
 Public Const WM_NULL As Long = &H0
 Public Const WM_DESTROY As Long = &H2

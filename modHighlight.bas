@@ -24,6 +24,12 @@ Private Const GUIDE_COLOR As Long = &HD8D8D8   ' light gray
 Public gGuidesEnabled As Boolean
 Private mTabW As Long
 
+' line numbers in the indicator margin (toggle persists via SaveSetting).
+' Numbers are CodeModule lines - the numbering the IDE itself reports -
+' NOT file lines: the designer block and Attribute headers exist only
+' on disk and are never displayed in the editor.
+Public gLineNumsEnabled As Boolean
+
 Private mHL() As MatchInfo
 Private mHLCount As Long
 Private mFindLen As Long
@@ -61,7 +67,8 @@ End Sub
 
 Public Function Highlight_Active() As Boolean
     Highlight_Active = (mHLCount > 0 Or BM_Count() > 0 Or _
-                        Git_MarkCount() > 0 Or gGuidesEnabled)
+                        Git_MarkCount() > 0 Or gGuidesEnabled Or _
+                        gLineNumsEnabled)
 End Function
 
 Public Sub Guides_Init()
@@ -78,6 +85,22 @@ Public Sub Guides_Toggle()
     SaveSetting "VB6Modernizr", "Options", "Guides", _
                 IIf(gGuidesEnabled, "1", "0")
     Highlight_EnsureHooks
+    Highlight_InvalidateAll
+End Sub
+
+Public Sub LineNums_Init()
+    On Error Resume Next
+    gLineNumsEnabled = _
+        (GetSetting("VB6Modernizr", "Options", "LineNums", "0") = "1")
+End Sub
+
+Public Sub LineNums_Toggle()
+    On Error Resume Next
+    gLineNumsEnabled = Not gLineNumsEnabled
+    SaveSetting "VB6Modernizr", "Options", "LineNums", _
+                IIf(gLineNumsEnabled, "1", "0")
+    Highlight_EnsureHooks
+    Layout_Update              ' reserve / release the gutter strip
     Highlight_InvalidateAll
 End Sub
 
@@ -165,6 +188,13 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     ' in Procedure View only the current proc's lines are displayed
     Dim loLine As Long, hiLine As Long
     GetDisplayedRange cp, loLine, hiLine
+
+    ' numbers go first so bookmarks / git bars draw over them; when
+    ' the gutter strip covers this window the margin stays clean
+    If gLineNumsEnabled And Not Gutter_Covers(hwnd) Then
+        PaintLineNumbers hdc, cp, topLine, visLines, loLine, hiLine, _
+                         lineH, yTop, marginPx
+    End If
 
     If gGuidesEnabled Then
         PaintGuides hdc, cp, topLine, visLines, loLine, hiLine, _
@@ -343,6 +373,49 @@ Private Sub DrawGitBar(ByVal hdc As Long, ByVal x1 As Long, ByVal Y1 As Long, _
     DeleteObject hBr
 End Sub
 
+' CodeModule line numbers, right-aligned in the indicator margin just
+' left of the git bars, in a small gray font so they read as chrome.
+Private Sub PaintLineNumbers(ByVal hdc As Long, cp As VBIDE.CodePane, _
+        ByVal topLine As Long, ByVal visLines As Long, _
+        ByVal loLine As Long, ByVal hiLine As Long, _
+        ByVal lineH As Long, ByVal yTop As Long, ByVal marginPx As Long)
+    On Error Resume Next
+    Dim cnt As Long
+    cnt = cp.CodeModule.CountOfLines
+    If cnt < 1 Then Exit Sub
+
+    Dim fh As Long, hFont As Long, hOldFont As Long
+    fh = lineH - ScaleForDpi(5)
+    If fh < ScaleForDpi(7) Then fh = ScaleForDpi(7)
+    hFont = CreateFontA(-fh, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 0, 0, _
+                        "Segoe UI")
+    If hFont = 0 Then Exit Sub
+    hOldFont = SelectObject(hdc, hFont)
+    SetBkMode hdc, BKMODE_TRANSPARENT
+    SetTextColor hdc, &HB0B0B0          ' light gray, unobtrusive
+
+    Dim i As Long, ln As Long, s As String, x As Long, y As Long
+    Dim xRight As Long, sz As SIZEAPI
+    xRight = marginPx - ScaleForDpi(7)  ' clear of the git bar strip
+
+    For i = 0 To visLines - 1
+        ln = topLine + i
+        If ln >= loLine And ln <= hiLine And ln <= cnt Then
+            s = CStr(ln)
+            GetTextExtentPoint32A hdc, s, Len(s), sz
+            x = xRight - sz.cx
+            If x < 1 Then x = 1
+            ' + 3: text rows start a hair below the computed offset,
+            ' same empirical shift the match boxes use
+            y = yTop + i * lineH + ScaleForDpi(3) + (lineH - sz.cy) \ 2
+            TextOutA hdc, x, y, s, Len(s)
+        End If
+    Next
+
+    SelectObject hdc, hOldFont
+    DeleteObject hFont
+End Sub
+
 Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     On Error Resume Next
     If Not Highlight_Active() Then Exit Sub
@@ -442,7 +515,7 @@ End Sub
 ' Range of module lines the pane is currently displaying: the whole
 ' module in Full Module View, else the proc (or the declarations
 ' section) that the top visible line belongs to.
-Private Sub GetDisplayedRange(ByVal cp As VBIDE.CodePane, _
+Public Sub GetDisplayedRange(ByVal cp As VBIDE.CodePane, _
         loLine As Long, hiLine As Long)
     On Error Resume Next
     Dim cm As VBIDE.CodeModule
@@ -463,7 +536,7 @@ Private Sub GetDisplayedRange(ByVal cp As VBIDE.CodePane, _
 End Sub
 
 ' Bottom edge of the object/procedure combos, in pane client coords.
-Private Function EditorTopOffset(ByVal hPane As Long) As Long
+Public Function EditorTopOffset(ByVal hPane As Long) As Long
     On Error Resume Next
     Dim H As Long, rc As RECT, pt As POINTAPI, bottomMax As Long
     H = FindWindowEx(hPane, 0, "ComboBox", vbNullString)

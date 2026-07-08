@@ -9,11 +9,13 @@ Option Explicit
 
 Public Const TAB_BAR_HEIGHT As Long = 28     ' px at 96 dpi
 Public Const FIND_BAR_HEIGHT As Long = 60    ' px at 96 dpi
+Public Const GUTTER_WIDTH As Long = 40       ' px at 96 dpi, line numbers
 
 Public gTabBarVisible As Boolean
 Public gFindBarVisible As Boolean
 
 Private mOldReserve As Long
+Private mOldReserveLeft As Long
 Private mHooked As Boolean
 
 ' ---------------------------------------------------------------------
@@ -54,7 +56,7 @@ End Sub
 
 Public Sub Layout_Update()
     On Error Resume Next
-    Dim hMDI As Long, newReserve As Long
+    Dim hMDI As Long, newReserve As Long, newLeft As Long
     hMDI = MDIClientHwnd()
     If hMDI = 0 Then Exit Sub
 
@@ -65,13 +67,17 @@ Public Sub Layout_Update()
 
     If gTabBarVisible Then newReserve = ScaleForDpi(TAB_BAR_HEIGHT)
     If gFindBarVisible Then newReserve = newReserve + ScaleForDpi(FIND_BAR_HEIGHT)
+    If gLineNumsEnabled Then newLeft = ScaleForDpi(GUTTER_WIDTH)
 
-    ' Give the old strip back to the MDI client, then reserve the new one.
+    ' Give the old strips back to the MDI client, then reserve anew.
     gReserveActive = False
-    If mOldReserve > 0 Then ExpandMDI hMDI, mOldReserve
+    If mOldReserve > 0 Or mOldReserveLeft > 0 Then _
+        ExpandMDI hMDI, mOldReserve, mOldReserveLeft
     gReservePx = newReserve
+    gReserveLeftPx = newLeft
     mOldReserve = newReserve
-    If newReserve > 0 Then
+    mOldReserveLeft = newLeft
+    If newReserve > 0 Or newLeft > 0 Then
         gReserveActive = True
         ResetMDIAdjustGuard
         NudgeMDI hMDI
@@ -92,6 +98,14 @@ Public Sub Layout_Update()
     ElseIf IsFormLoaded("frmFind") Then
         frmFind.Visible = False
     End If
+
+    If newLeft > 0 Then
+        frmGutter.Attach
+        frmGutter.Reposition
+        frmGutter.Visible = True
+    ElseIf IsFormLoaded("frmGutter") Then
+        frmGutter.Visible = False
+    End If
 End Sub
 
 ' Called from the MDIClient subclass whenever the IDE re-lays-out.
@@ -99,9 +113,19 @@ Public Sub Layout_Reposition()
     On Error Resume Next
     If gTabBarVisible Then frmTabs.Reposition
     If gFindBarVisible Then frmFind.Reposition
+    If gLineNumsEnabled Then frmGutter.Reposition
 End Sub
 
-' Top of the reserved strip, in main-window client coordinates.
+' True when this MDI child gets its numbers from the gutter strip:
+' the strip only aligns with a maximized child, floating windows keep
+' the in-margin fallback.
+Public Function Gutter_Covers(ByVal hwnd As Long) As Boolean
+    Gutter_Covers = gLineNumsEnabled And gReserveLeftPx > 0 And _
+        ((GetWindowLongA(hwnd, GWL_STYLE) And WS_MAXIMIZE) <> 0)
+End Function
+
+' Top of the reserved strip, in main-window client coordinates. The
+' bars span the gutter too, so they reach the true left edge.
 ' Returns False if the MDI client can't be found.
 Public Function Layout_StripOrigin(x As Long, y As Long, w As Long) As Boolean
     On Error Resume Next
@@ -111,21 +135,23 @@ Public Function Layout_StripOrigin(x As Long, y As Long, w As Long) As Boolean
     GetWindowRect hMDI, rc
     pt.x = rc.Left: pt.y = rc.Top
     ScreenToClient MainHwnd(), pt
-    x = pt.x
+    x = pt.x - gReserveLeftPx
     y = pt.y - gReservePx
-    w = rc.Right - rc.Left
+    w = rc.Right - rc.Left + gReserveLeftPx
     Layout_StripOrigin = True
 End Function
 
 ' ---------------------------------------------------------------------
 
-Private Sub ExpandMDI(ByVal hMDI As Long, ByVal reserve As Long)
+Private Sub ExpandMDI(ByVal hMDI As Long, ByVal reserve As Long, _
+        ByVal reserveLeft As Long)
     On Error Resume Next
     Dim rc As RECT, pt As POINTAPI
     GetWindowRect hMDI, rc
     pt.x = rc.Left: pt.y = rc.Top
     ScreenToClient GetParent(hMDI), pt
-    MoveWindow hMDI, pt.x, pt.y - reserve, rc.Right - rc.Left, _
+    MoveWindow hMDI, pt.x - reserveLeft, pt.y - reserve, _
+               rc.Right - rc.Left + reserveLeft, _
                rc.Bottom - rc.Top + reserve, 1
 End Sub
 
