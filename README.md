@@ -64,6 +64,9 @@ so the IDE never blocks. Status refreshes every ~5 s.
 - **Log** (Ctrl+Shift+L): `git log --graph` (git draws the graph) in
   a monospace list, optional all-branches; click a commit for its
   message + diffstat.
+
+![git log](images/git-log.png)
+  
 - **Blame** (Ctrl+Shift+B): commit/author/date/summary for the
   current line.
 - **Changed-line markers**: margin bars (green = added, blue =
@@ -75,6 +78,10 @@ so the IDE never blocks. Status refreshes every ~5 s.
   no need for Microsoft's separate MouseWheel fix.
 - **Indentation guides** (menu toggle, default off): dotted vertical
   lines per indent step, bridging blank lines.
+
+  ![indentation guides](images/indentation-guides.png)
+
+  
 - **Line numbers** (menu toggle, default off): a real gutter strip is
   reserved left of the editor for maximized windows; floating windows
   fall back to small numbers in the indicator margin. These are
@@ -82,7 +89,7 @@ so the IDE never blocks. Status refreshes every ~5 s.
   error messages — not file lines (the designer block and `Attribute`
   headers only exist on disk, the editor never shows them).
 
-![indentation guides](images/indentation-guides.png)
+  ![line numbers](images/line-numbers.png)
   
 - **Auto-backup** (menu toggle, default on): every 10 minutes, if
   project files changed, zips the project folder to
