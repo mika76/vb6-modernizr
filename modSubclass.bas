@@ -109,9 +109,22 @@ Private Function SubWndProc(ByVal hwnd As Long, ByVal uMsg As Long, _
         Select Case uMsg
         Case WM_PAINT
             Highlight_PaintPane hwnd
-        Case WM_VSCROLL, WM_HSCROLL, WM_MOUSEWHEEL
-            ' scrolling copies pixels, which drags stale highlight
-            ' boxes along - repaint the whole pane
+        Case WM_VSCROLL, WM_MOUSEWHEEL
+            ' vertical scrolling copies pixels, and everything we draw
+            ' is line-anchored, so it rides along correctly; drawing
+            ' the overlays again on top is idempotent and avoids the
+            ' erase+repaint flicker a full invalidate would cause.
+            ' The scrollbar repaints its thumb directly (no WM_PAINT),
+            ' erasing the tick marks - redraw those directly too.
+            If Highlight_Active() Then
+                Highlight_PaintPane hwnd
+                Dim hSB As Long
+                hSB = FindVScrollBarChild(hwnd)
+                If hSB <> 0 Then Highlight_PaintScrollbar hSB
+            End If
+        Case WM_HSCROLL
+            ' horizontal scrolling breaks the column-1 assumption the
+            ' boxes are placed with - here a full repaint is needed
             If Highlight_Active() Then InvalidateRect hwnd, 0, 0
         Case WM_DESTROY
             Unhook_Window hwnd
@@ -119,11 +132,18 @@ Private Function SubWndProc(ByVal hwnd As Long, ByVal uMsg As Long, _
 
     Case hpScrollBar
         SubWndProc = CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam)
-        If uMsg = WM_PAINT Then
+        Select Case uMsg
+        Case WM_PAINT
             Highlight_PaintScrollbar hwnd
-        ElseIf uMsg = WM_DESTROY Then
+        Case WM_MOUSEMOVE, WM_LBUTTONUP, WM_TIMER, WM_APP_SBTICKS
+            ' these repaint the bar directly (no WM_PAINT) - put the
+            ' tick marks back each time. WM_APP_SBTICKS is posted by
+            ' the modWheel hook during thumb tracking, whose modal
+            ' loop swallows mouse moves but dispatches posted messages
+            Highlight_PaintScrollbar hwnd
+        Case WM_DESTROY
             Unhook_Window hwnd
-        End If
+        End Select
 
     Case hpScrollHost
         If uMsg = WM_VSCROLL Then

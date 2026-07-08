@@ -63,6 +63,16 @@ Public Type SCROLLINFO
     nTrackPos As Long
 End Type
 
+Public Type SCROLLBARINFO
+    cbSize As Long
+    rcScrollBar As RECT
+    dxyLineButton As Long
+    xyThumbTop As Long
+    xyThumbBottom As Long
+    reserved As Long
+    rgstate(0 To 5) As Long
+End Type
+
 ' --- user32 / kernel32 ------------------------------------------------
 
 Public Declare Function FindWindowEx Lib "user32" Alias "FindWindowExA" _
@@ -117,6 +127,10 @@ Public Declare Function ShowWindow Lib "user32" _
 Public Const SW_HIDE As Long = 0
 Public Const SW_SHOWNOACTIVATE As Long = 4
 
+Public Declare Function PostMessageA Lib "user32" _
+    (ByVal hwnd As Long, ByVal wMsg As Long, ByVal wParam As Long, _
+     ByVal lParam As Long) As Long
+Public Declare Function GetCapture Lib "user32" () As Long
 Public Declare Function GetKeyState Lib "user32" (ByVal nVirtKey As Long) As Integer
 Public Declare Function GetFocus Lib "user32" () As Long
 Public Declare Function SetFocusAPI Lib "user32" Alias "SetFocus" _
@@ -131,6 +145,9 @@ Public Declare Function SetScrollInfo Lib "user32" _
      ByVal fRedraw As Long) As Long
 Public Declare Function GetScrollInfo Lib "user32" _
     (ByVal hwnd As Long, ByVal fnBar As Long, lpsi As SCROLLINFO) As Long
+Public Declare Function GetScrollBarInfo Lib "user32" _
+    (ByVal hwnd As Long, ByVal idObject As Long, _
+     psbi As SCROLLBARINFO) As Long
 Public Declare Function DrawIconEx Lib "user32" _
     (ByVal hdc As Long, ByVal x As Long, ByVal y As Long, ByVal hIcon As Long, _
      ByVal cx As Long, ByVal cy As Long, ByVal istepIfAniCur As Long, _
@@ -210,6 +227,14 @@ Public Const WM_SYSKEYDOWN As Long = &H104
 Public Const WM_VSCROLL As Long = &H115
 Public Const WM_HSCROLL As Long = &H114
 Public Const WM_MOUSEWHEEL As Long = &H20A
+Public Const WM_MOUSEMOVE As Long = &H200
+Public Const WM_LBUTTONUP As Long = &H202
+Public Const WM_TIMER As Long = &H113
+
+' private message (WM_APP range): redraw the scrollbar tick overlay.
+' Posted during thumb tracking, where the scrollbar's modal loop eats
+' mouse messages but still dispatches posted ones.
+Public Const WM_APP_SBTICKS As Long = &H8055&
 Public Const WM_WINDOWPOSCHANGING As Long = &H46
 Public Const WM_WINDOWPOSCHANGED As Long = &H47
 
@@ -230,6 +255,7 @@ Public Const SIF_TRACKPOS As Long = &H10
 Public Const SIF_ALL As Long = &H17
 
 Public Const WS_VSCROLL As Long = &H200000
+Public Const OBJID_CLIENT As Long = &HFFFFFFFC
 
 Public Const SWP_NOSIZE As Long = &H1
 Public Const SWP_NOMOVE As Long = &H2
