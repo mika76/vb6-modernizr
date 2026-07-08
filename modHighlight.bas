@@ -15,8 +15,8 @@ Option Explicit
 '  is at the left edge (fine for the overwhelmingly common case).
 ' =====================================================================
 
-Private Const HL_COLOR As Long = &H157DE9      ' RGB(233,125,21) - orange
-Private Const MARK_COLOR As Long = &H157DE9
+Private Const HL_COLOR As Long = THEME_ACCENT  ' RGB(233,125,21) - orange
+Private Const MARK_COLOR As Long = THEME_ACCENT
 Private Const BM_COLOR As Long = &HD77800      ' RGB(0,120,215) - blue
 Private Const GUIDE_COLOR As Long = &HD8D8D8   ' light gray
 

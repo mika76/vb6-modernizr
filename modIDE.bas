@@ -45,6 +45,24 @@ Public Type SIZEAPI
     cy As Long
 End Type
 
+Public Type SHFILEINFO
+    hIcon As Long
+    iIcon As Long
+    dwAttributes As Long
+    szDisplayName As String * 260
+    szTypeName As String * 80
+End Type
+
+Public Type SCROLLINFO
+    cbSize As Long
+    fMask As Long
+    nMin As Long
+    nMax As Long
+    nPage As Long
+    nPos As Long
+    nTrackPos As Long
+End Type
+
 ' --- user32 / kernel32 ------------------------------------------------
 
 Public Declare Function FindWindowEx Lib "user32" Alias "FindWindowExA" _
@@ -104,9 +122,36 @@ Public Declare Function GetFocus Lib "user32" () As Long
 Public Declare Function SetFocusAPI Lib "user32" Alias "SetFocus" _
     (ByVal hwnd As Long) As Long
 
+Public Declare Function SetWindowPos Lib "user32" _
+    (ByVal hwnd As Long, ByVal hWndInsertAfter As Long, _
+     ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, _
+     ByVal wFlags As Long) As Long
+Public Declare Function SetScrollInfo Lib "user32" _
+    (ByVal hwnd As Long, ByVal fnBar As Long, lpsi As SCROLLINFO, _
+     ByVal fRedraw As Long) As Long
+Public Declare Function GetScrollInfo Lib "user32" _
+    (ByVal hwnd As Long, ByVal fnBar As Long, lpsi As SCROLLINFO) As Long
+Public Declare Function DrawIconEx Lib "user32" _
+    (ByVal hdc As Long, ByVal x As Long, ByVal y As Long, ByVal hIcon As Long, _
+     ByVal cx As Long, ByVal cy As Long, ByVal istepIfAniCur As Long, _
+     ByVal hbrFlickerFreeDraw As Long, ByVal diFlags As Long) As Long
+Public Declare Function DestroyIcon Lib "user32" (ByVal hIcon As Long) As Long
+
 Public Declare Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" _
     (Destination As Any, Source As Any, ByVal Length As Long)
 Public Declare Function GetCurrentThreadId Lib "kernel32" () As Long
+
+' --- shell32 (file icons) ---------------------------------------------
+
+Public Declare Function SHGetFileInfoA Lib "shell32" _
+    (ByVal pszPath As String, ByVal dwFileAttributes As Long, _
+     psfi As SHFILEINFO, ByVal cbFileInfo As Long, ByVal uFlags As Long) As Long
+
+Public Const SHGFI_ICON As Long = &H100&
+Public Const SHGFI_SMALLICON As Long = &H1&
+Public Const SHGFI_USEFILEATTRIBUTES As Long = &H10&
+Public Const FILE_ATTRIBUTE_NORMAL As Long = &H80&
+Public Const DI_NORMAL As Long = &H3&
 
 ' --- gdi32 ------------------------------------------------------------
 
@@ -170,9 +215,27 @@ Public Const WM_WINDOWPOSCHANGED As Long = &H47
 
 Public Const SB_LINEUP As Long = 0
 Public Const SB_LINEDOWN As Long = 1
+Public Const SB_PAGEUP As Long = 2
+Public Const SB_PAGEDOWN As Long = 3
+Public Const SB_THUMBPOSITION As Long = 4
+Public Const SB_THUMBTRACK As Long = 5
+Public Const SB_TOP As Long = 6
+Public Const SB_BOTTOM As Long = 7
+Public Const SB_VERT As Long = 1
+
+Public Const SIF_RANGE As Long = &H1
+Public Const SIF_PAGE As Long = &H2
+Public Const SIF_POS As Long = &H4
+Public Const SIF_TRACKPOS As Long = &H10
+Public Const SIF_ALL As Long = &H17
+
+Public Const WS_VSCROLL As Long = &H200000
 
 Public Const SWP_NOSIZE As Long = &H1
 Public Const SWP_NOMOVE As Long = &H2
+Public Const SWP_NOZORDER As Long = &H4
+Public Const SWP_NOACTIVATE As Long = &H10
+Public Const SWP_FRAMECHANGED As Long = &H20
 
 Public Const WH_GETMESSAGE As Long = 3
 Public Const HC_ACTION As Long = 0

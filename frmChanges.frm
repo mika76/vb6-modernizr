@@ -1,118 +1,120 @@
 VERSION 5.00
 Begin VB.Form frmChanges
    Caption         =   "Git Changes - Modernizr"
-   ClientHeight    =   7300
+   ClientHeight    =   7550
    ClientLeft      =   60
    ClientTop       =   345
    ClientWidth     =   8000
    LinkTopic       =   "Form1"
-   ScaleHeight     =   7300
+   ScaleHeight     =   7550
    ScaleWidth      =   8000
    ShowInTaskbar   =   0   'False
    StartUpPosition =   2  'CenterScreen
    Begin VB.CommandButton cmdRefresh
       Caption         =   "&Refresh"
       Height          =   345
-      Left            =   6860
+      Left            =   6820
       TabIndex        =   1
-      Top             =   105
+      Top             =   135
       Width           =   1000
    End
-   Begin VB.ListBox lstUnstaged
+   Begin VB6Modernizr.ucList lstUnstaged
       Height          =   1815
-      Left            =   120
-      MultiSelect     =   2  'Extended
+      Left            =   180
       TabIndex        =   3
-      Top             =   810
-      Width           =   7760
+      Top             =   870
+      Width           =   7640
+      _ExtentX        =   13476
+      _ExtentY        =   3202
    End
    Begin VB.CommandButton cmdStage
       Caption         =   "Stage &Selected"
       Height          =   345
-      Left            =   120
+      Left            =   180
       TabIndex        =   4
-      Top             =   2730
+      Top             =   2805
       Width           =   1500
    End
    Begin VB.CommandButton cmdStageAll
       Caption         =   "Stage &All"
       Height          =   345
-      Left            =   1700
+      Left            =   1760
       TabIndex        =   5
-      Top             =   2730
+      Top             =   2805
       Width           =   1200
    End
    Begin VB.CommandButton cmdUnstage
       Caption         =   "&Unstage Selected"
       Height          =   345
-      Left            =   3200
+      Left            =   3260
       TabIndex        =   6
-      Top             =   2730
+      Top             =   2805
       Width           =   1700
    End
    Begin VB.CommandButton cmdUnstageAll
       Caption         =   "U&nstage All"
       Height          =   345
-      Left            =   4980
+      Left            =   5040
       TabIndex        =   7
-      Top             =   2730
+      Top             =   2805
       Width           =   1300
    End
-   Begin VB.ListBox lstStaged
+   Begin VB6Modernizr.ucList lstStaged
       Height          =   1815
-      Left            =   120
-      MultiSelect     =   2  'Extended
+      Left            =   180
       TabIndex        =   9
-      Top             =   3480
-      Width           =   7760
+      Top             =   3585
+      Width           =   7640
+      _ExtentX        =   13476
+      _ExtentY        =   3202
    End
    Begin VB.TextBox txtMsg
       Height          =   630
-      Left            =   120
+      Left            =   180
       MultiLine       =   -1  'True
       TabIndex        =   10
-      Top             =   5430
-      Width           =   6600
+      Top             =   5560
+      Width           =   6440
    End
    Begin VB.CommandButton cmdCommit
       Caption         =   "&Commit"
       Height          =   630
-      Left            =   6860
+      Left            =   6820
       TabIndex        =   11
-      Top             =   5430
+      Top             =   5560
       Width           =   1000
    End
    Begin VB.Label lblBranch
       Caption         =   ""
       Height          =   255
-      Left            =   120
+      Left            =   180
       TabIndex        =   0
-      Top             =   150
+      Top             =   180
       Width           =   6600
    End
    Begin VB.Label lblUnstaged
       Caption         =   "Unstaged / untracked  (double-click opens the file):"
       Height          =   240
-      Left            =   120
+      Left            =   180
       TabIndex        =   2
-      Top             =   540
-      Width           =   7700
+      Top             =   600
+      Width           =   7640
    End
    Begin VB.Label lblStaged
       Caption         =   "Staged  (will be committed):"
       Height          =   240
-      Left            =   120
+      Left            =   180
       TabIndex        =   8
-      Top             =   3210
-      Width           =   7700
+      Top             =   3315
+      Width           =   7640
    End
    Begin VB.Label lblStatus
       Caption         =   ""
       Height          =   615
-      Left            =   120
+      Left            =   180
       TabIndex        =   12
-      Top             =   6180
-      Width           =   7760
+      Top             =   6340
+      Width           =   7640
    End
 End
 Attribute VB_Name = "frmChanges"
@@ -129,31 +131,33 @@ Option Explicit
 '  file appears in both lists. Double-click opens the file.
 ' =====================================================================
 
-Private Const LB_SETHORIZONTALEXTENT As Long = &H194
-
 Private mUnPaths() As String
 Private mUnCount As Long
 Private mStPaths() As String
 Private mStCount As Long
+Private mLastSig As String     ' last rendered status, to skip no-op rebuilds
 
 Public Sub ShowChanges()
     On Error Resume Next
     Load Me
-    SendMessageA lstUnstaged.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
-    SendMessageA lstStaged.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
     SetWindowLongA Me.hwnd, GWL_HWNDPARENT, MainHwnd()
     RefreshList
     Me.Show vbModeless
 End Sub
 
+Private Sub Form_Load()
+    lstUnstaged.MultiSelect = True
+    lstStaged.MultiSelect = True
+End Sub
+
 Public Sub RefreshList()
     On Error Resume Next
-    lstUnstaged.Clear
-    lstStaged.Clear
-    mUnCount = 0
-    mStCount = 0
-
     If Not Git_HasRepo() Then
+        lstUnstaged.Clear
+        lstStaged.Clear
+        mUnCount = 0
+        mStCount = 0
+        mLastSig = ""
         lblBranch.Caption = "No git repository found for the active project."
         lblStatus.Caption = ""
         Exit Sub
@@ -162,30 +166,77 @@ Public Sub RefreshList()
     lblBranch.Caption = "Branch: " & Git_Branch() & _
         IIf(Git_RepoDirty(), "   (uncommitted changes)", "   (clean)")
 
+    ' build both lists into temp arrays first, so an unchanged status
+    ' (the ~5s background poll) never resets selection or scrolling
     Dim st() As String, pth() As String, n As Long, i As Long
     n = Git_ChangedList(st, pth)
-    ReDim mUnPaths(0 To n + 1)
-    ReDim mStPaths(0 To n + 1)
 
-    Dim x As String, y As String, rel As String
+    Dim unDisp() As String, unPath() As String, unN As Long
+    Dim stDisp() As String, stPath() As String, stN As Long
+    ReDim unDisp(0 To n + 1)
+    ReDim unPath(0 To n + 1)
+    ReDim stDisp(0 To n + 1)
+    ReDim stPath(0 To n + 1)
+
+    Dim x As String, y As String, rel As String, sig As String
     For i = 0 To n - 1
         x = Left$(st(i), 1)
         y = Mid$(st(i) & " ", 2, 1)
         rel = Mid$(pth(i), Len(Git_RepoRoot()) + 2)
         If x <> " " And x <> "?" Then
-            mStPaths(mStCount) = pth(i)
-            mStCount = mStCount + 1
-            lstStaged.AddItem "[" & x & "]  " & rel
+            stDisp(stN) = "[" & x & "]  " & rel
+            stPath(stN) = pth(i)
+            stN = stN + 1
         End If
         If y <> " " Then
-            mUnPaths(mUnCount) = pth(i)
-            mUnCount = mUnCount + 1
-            lstUnstaged.AddItem "[" & y & "]  " & rel
+            unDisp(unN) = "[" & y & "]  " & rel
+            unPath(unN) = pth(i)
+            unN = unN + 1
         End If
+        sig = sig & st(i) & "|" & pth(i) & ";"
     Next
+
+    If sig <> mLastSig Then
+        mLastSig = sig
+        RebuildPreserving lstUnstaged, unDisp, unPath, unN
+        RebuildPreserving lstStaged, stDisp, stPath, stN
+        mUnPaths = unPath
+        mUnCount = unN
+        mStPaths = stPath
+        mStCount = stN
+    End If
 
     lblStatus.Caption = mUnCount & " unstaged, " & mStCount & _
         " staged.  M=modified, A=added, D=deleted, R=renamed, ?=untracked."
+End Sub
+
+' Reload a list but keep what the user had: selected paths, the
+' focused row and the scroll position survive a content change.
+Private Sub RebuildPreserving(lst As ucList, disp() As String, _
+        pths() As String, ByVal cnt As Long)
+    On Error Resume Next
+    Dim selKeys As New Collection, focusKey As String, topIdx As Long
+    Dim i As Long, k As String
+
+    For i = 0 To lst.ListCount - 1
+        If lst.Selected(i) Then selKeys.Add lst.ItemKey(i), lst.ItemKey(i)
+    Next
+    If lst.ListIndex >= 0 Then focusKey = lst.ItemKey(lst.ListIndex)
+    topIdx = lst.TopIndex
+
+    lst.Clear
+    For i = 0 To cnt - 1
+        lst.AddItem disp(i), pths(i), pths(i)
+    Next
+
+    For i = 0 To cnt - 1
+        k = lst.ItemKey(i)
+        Err.Clear
+        selKeys.Item k
+        If Err.Number = 0 Then lst.Selected(i) = True
+        If Len(focusKey) > 0 And k = focusKey Then lst.ListIndex = i
+    Next
+    lst.TopIndex = topIdx
 End Sub
 
 ' ---------------------------------------------------------------------
@@ -228,7 +279,7 @@ Private Sub cmdUnstageAll_Click()
     RefreshList
 End Sub
 
-Private Function SelectedOf(lst As ListBox, paths() As String) As Collection
+Private Function SelectedOf(lst As ucList, paths() As String) As Collection
     Dim c As New Collection, i As Long
     For i = 0 To lst.ListCount - 1
         If lst.Selected(i) Then c.Add paths(i)
@@ -293,7 +344,7 @@ Private Sub lstStaged_DblClick()
     OpenFromList lstStaged, mStPaths, mStCount
 End Sub
 
-Private Sub OpenFromList(lst As ListBox, paths() As String, ByVal cnt As Long)
+Private Sub OpenFromList(lst As ucList, paths() As String, ByVal cnt As Long)
     On Error Resume Next
     Dim i As Long
     i = lst.ListIndex
@@ -337,29 +388,29 @@ Private Sub Form_Resize()
     On Error Resume Next
     If Me.WindowState = vbMinimized Then Exit Sub
     Dim w As Long, extra As Long
-    w = Me.ScaleWidth - 240
+    w = Me.ScaleWidth - MARGIN_STD * 2
     ' distribute extra height between the two lists
-    extra = (Me.ScaleHeight - 7300) \ 2
+    extra = (Me.ScaleHeight - 7550) \ 2
     If extra < -600 Then extra = -600
 
     lstUnstaged.Width = w
     lstUnstaged.Height = 1815 + extra
 
-    cmdStage.Top = lstUnstaged.Top + lstUnstaged.Height + 100
+    cmdStage.Top = lstUnstaged.Top + lstUnstaged.Height + 120
     cmdStageAll.Top = cmdStage.Top
     cmdUnstage.Top = cmdStage.Top
     cmdUnstageAll.Top = cmdStage.Top
 
-    lblStaged.Top = cmdStage.Top + 480
-    lstStaged.Top = lblStaged.Top + 270
+    lblStaged.Top = cmdStage.Top + 510
+    lstStaged.Top = lblStaged.Top + 300
     lstStaged.Width = w
     lstStaged.Height = 1815 + extra
 
-    txtMsg.Top = lstStaged.Top + lstStaged.Height + 130
-    txtMsg.Width = Me.ScaleWidth - 1400
+    txtMsg.Top = lstStaged.Top + lstStaged.Height + 160
+    txtMsg.Width = Me.ScaleWidth - 1480
     cmdCommit.Top = txtMsg.Top
-    cmdCommit.Left = Me.ScaleWidth - 1140
-    cmdRefresh.Left = Me.ScaleWidth - 1140
-    lblStatus.Top = txtMsg.Top + 750
+    cmdCommit.Left = Me.ScaleWidth - 1180
+    cmdRefresh.Left = Me.ScaleWidth - 1180
+    lblStatus.Top = txtMsg.Top + 780
     lblStatus.Width = w
 End Sub

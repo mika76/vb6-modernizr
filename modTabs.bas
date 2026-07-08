@@ -7,7 +7,7 @@ Option Explicit
 '  MDI client during the IDE's own layout passes (see modSubclass).
 ' =====================================================================
 
-Public Const TAB_BAR_HEIGHT As Long = 26     ' px at 96 dpi
+Public Const TAB_BAR_HEIGHT As Long = 28     ' px at 96 dpi
 Public Const FIND_BAR_HEIGHT As Long = 60    ' px at 96 dpi
 
 Public gTabBarVisible As Boolean

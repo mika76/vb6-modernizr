@@ -72,6 +72,7 @@ Private Sub InitAddin()
     Guides_Init
     Backup_Init
     TabBar_Init
+    Menu_SyncToggles
 End Sub
 
 Private Sub TermAddin()
@@ -90,9 +91,12 @@ Private Sub TermAddin()
     Unload frmChanges
     Unload frmGitLog
 
+    Theme_FreeIcons
+
     If Not mMenuPopup Is Nothing Then mMenuPopup.Delete
     Set mMenuPopup = Nothing
     Set mButtons = Nothing
+    Menu_ClearToggles
 
     Set gVBE = Nothing
     Set VBInstance = Nothing
@@ -136,8 +140,8 @@ Private Sub AddMenus()
 
     AddBtn "Clear &Highlights", "clearhl", True
     AddBtn "Show/Hide &Tabs", "tabs", False
-    AddBtn "Indentation G&uides (toggle)", "guides", False
-    AddBtn "Auto-Backu&p (toggle)", "backup", False
+    AddBtn "Indentation G&uides", "guides", False
+    AddBtn "Auto-Backu&p", "backup", False
     AddBtn "Backup No&w", "backupnow", False
 
     AddBtn "&Keyboard Shortcuts... (Ctrl+Shift+/)", "keys", True
@@ -155,4 +159,10 @@ Private Sub AddBtn(ByVal cap As String, ByVal act As String, _
     mb.Action = act
     Set mb.evt = VBInstance.Events.CommandBarEvents(btn)
     mButtons.Add mb
+
+    ' on/off commands show a check mark tracking their flag
+    Select Case act
+    Case "tabs", "guides", "backup"
+        Menu_RegisterToggle act, btn
+    End Select
 End Sub

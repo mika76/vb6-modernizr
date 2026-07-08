@@ -13,6 +13,7 @@ Public Enum HookPurpose
     hpMDIClient = 1     ' reserve space for the docked bars
     hpCodePane = 2      ' paint match highlights after WM_PAINT
     hpScrollBar = 3     ' paint match marks on the vertical scrollbar
+    hpScrollHost = 4    ' native WS_VSCROLL host (see modScroll)
 End Enum
 
 Private Const MAX_HOOKS As Long = 128
@@ -122,6 +123,18 @@ Private Function SubWndProc(ByVal hwnd As Long, ByVal uMsg As Long, _
             Highlight_PaintScrollbar hwnd
         ElseIf uMsg = WM_DESTROY Then
             Unhook_Window hwnd
+        End If
+
+    Case hpScrollHost
+        If uMsg = WM_VSCROLL Then
+            Scroll_OnVScroll hwnd, wParam And &HFFFF&
+            SubWndProc = 0
+        ElseIf uMsg = WM_MOUSEWHEEL Then
+            Scroll_Wheel hwnd, HiWordSigned(wParam)
+            SubWndProc = 0
+        Else
+            SubWndProc = CallWindowProcA(oldProc, hwnd, uMsg, wParam, lParam)
+            If uMsg = WM_DESTROY Then Scroll_Detach hwnd
         End If
 
     Case Else

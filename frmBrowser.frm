@@ -12,18 +12,18 @@ Begin VB.Form frmBrowser
    StartUpPosition =   2  'CenterScreen
    Begin VB.TextBox txtFilter
       Height          =   315
-      Left            =   120
+      Left            =   180
       TabIndex        =   0
-      Top             =   120
+      Top             =   150
       Width           =   2800
    End
    Begin VB.OptionButton optKind
       Caption         =   "&Procedures"
       Height          =   255
       Index           =   0
-      Left            =   3060
+      Left            =   3120
       TabIndex        =   1
-      Top             =   150
+      Top             =   180
       Value           =   -1  'True
       Width           =   1400
    End
@@ -31,33 +31,35 @@ Begin VB.Form frmBrowser
       Caption         =   "&TODOs"
       Height          =   255
       Index           =   1
-      Left            =   4560
+      Left            =   4620
       TabIndex        =   2
-      Top             =   150
+      Top             =   180
       Width           =   1100
    End
    Begin VB.CommandButton cmdRefresh
       Caption         =   "&Refresh"
       Height          =   345
-      Left            =   6060
+      Left            =   6020
       TabIndex        =   3
-      Top             =   110
+      Top             =   140
       Width           =   1000
    End
-   Begin VB.ListBox lstItems
-      Height          =   4155
-      Left            =   120
+   Begin VB6Modernizr.ucList lstItems
+      Height          =   4095
+      Left            =   180
       TabIndex        =   4
-      Top             =   570
-      Width           =   6960
+      Top             =   630
+      Width           =   6840
+      _ExtentX        =   12065
+      _ExtentY        =   7223
    End
    Begin VB.Label lblStatus
       Caption         =   ""
       Height          =   255
-      Left            =   120
+      Left            =   180
       TabIndex        =   5
-      Top             =   5040
-      Width           =   6960
+      Top             =   4980
+      Width           =   6840
    End
 End
 Attribute VB_Name = "frmBrowser"
@@ -73,8 +75,6 @@ Option Explicit
 '  jumps to the item.
 ' =====================================================================
 
-Private Const LB_SETHORIZONTALEXTENT As Long = &H194
-
 Private mComp() As String
 Private mLine() As Long
 Private mCount As Long
@@ -89,10 +89,6 @@ Public Sub ShowBrowser()
     txtFilter.SetFocus
 End Sub
 
-Private Sub Form_Load()
-    SendMessageA lstItems.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
-End Sub
-
 Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         Cancel = True
@@ -103,10 +99,10 @@ End Sub
 Private Sub Form_Resize()
     On Error Resume Next
     If Me.WindowState = vbMinimized Then Exit Sub
-    lstItems.Width = Me.ScaleWidth - 240
-    lstItems.Height = Me.ScaleHeight - lstItems.Top - 500
-    lblStatus.Top = Me.ScaleHeight - 380
-    lblStatus.Width = Me.ScaleWidth - 240
+    lstItems.Width = Me.ScaleWidth - MARGIN_STD * 2
+    lstItems.Height = Me.ScaleHeight - lstItems.Top - 560
+    lblStatus.Top = Me.ScaleHeight - 420
+    lblStatus.Width = Me.ScaleWidth - MARGIN_STD * 2
 End Sub
 
 Private Sub txtFilter_Change()
@@ -198,7 +194,9 @@ Private Sub AddEntry(ByVal comp As String, ByVal lineNo As Long, _
     mComp(mCount) = comp
     mLine(mCount) = lineNo
     mCount = mCount + 1
-    lstItems.AddItem display
+    ' colored dot: blue = procedure, orange = TODO
+    lstItems.AddItem display, , , _
+        IIf(optKind(0).Value, THEME_CODE, THEME_ACCENT)
 End Sub
 
 ' ---------------------------------------------------------------------
