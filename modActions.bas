@@ -69,12 +69,7 @@ Public Sub DoAction(ByVal act As String)
     Case "backup":    Backup_Toggle
     Case "backupnow": Backup_Now True
     Case "keys":      frmShortcuts.ShowSheet
-    Case "about":
-        MsgBox "VB6 Modernizr 1.1" & vbCrLf & vbCrLf & _
-               "MDI window tabs, find/replace bar with highlighting," & vbCrLf & _
-               "find in files, references, editing shortcuts and" & vbCrLf & _
-               "mouse wheel scrolling for the VB6 IDE.", _
-               vbInformation, "VB6 Modernizr"
+    Case "about":     frmAbout.ShowAbout
     End Select
 
     Menu_SyncToggles

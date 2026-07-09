@@ -95,6 +95,7 @@ Private Sub TermAddin()
     Unload frmChanges
     Unload frmGitLog
     Unload frmGutter
+    Unload frmAbout
 
     Theme_FreeIcons
 
