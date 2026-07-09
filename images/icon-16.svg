@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" role="img" aria-label="VB6 Modernizr icon">
+  <title>VB6 Modernizr icon (16 px, pixel-hinted, toolbar size)</title>
+  <defs>
+    <clipPath id="cutL"><polygon points="0,0 10,0 6,16 0,16"/></clipPath>
+    <clipPath id="cutR"><polygon points="10,0 16,0 16,16 6,16"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#cutL)">
+    <rect x="0.5" y="0.5" width="15" height="15" fill="#d4d0c8" stroke="#808080"/>
+    <path d="M1.5,14.5 V1.5 H14.5" stroke="#ffffff" fill="none"/>
+    <rect x="2" y="2" width="12" height="3" fill="#000080"/>
+    <rect x="3" y="3" width="4" height="1" fill="#ffffff"/>
+    <rect x="3" y="8" width="1" height="1" fill="#808080"/>
+    <rect x="6" y="8" width="1" height="1" fill="#808080"/>
+    <rect x="3" y="11" width="1" height="1" fill="#808080"/>
+  </g>
+  <g clip-path="url(#cutR)">
+    <rect x="0.5" y="0.5" width="15" height="15" rx="4" fill="#ffffff" stroke="#0a7ad0"/>
+    <path d="M6,0.5 H11.5 A4,4 0 0 1 15.5,4.5 V5.5 H6 Z" fill="#2ea6e8"/>
+    <rect x="9" y="10" width="4" height="2" rx="1" fill="#2ea6e8"/>
+  </g>
+  <line x1="10" y1="0" x2="6" y2="16" stroke="#ffffff"/>
+</svg>
