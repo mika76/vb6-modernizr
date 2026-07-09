@@ -80,6 +80,8 @@ so the IDE never blocks. Status refreshes every ~5 s.
   modified, red = deletion below) and scrollbar marks, computed from
   `git diff -U0` against HEAD. Reflects the *saved* file.
 
+![git markers](images/git-markers.png)
+
 ### Extras
 - **Mouse wheel scrolling** in code windows (Shift+wheel horizontal) —
   no need for Microsoft's separate MouseWheel fix.
