@@ -36,9 +36,11 @@ Private Declare Function LoadImageA Lib "user32" _
 Private Const IMAGE_ICON As Long = 1
 Private Const WM_SETICON As Long = &H80
 Private Const ICON_SMALL As Long = 0
-
-Private mDlgIcon As StdPicture  ' 32px resource icon, shared by all dialogs
-Private mDlgIcon16 As Long      ' HICON, true 16px title-bar frame
+Private Const ICON_BIG As Long = 1
+Private Const SM_CXSMICON As Long = 49
+Private Const SM_CYSMICON As Long = 50
+Private Const SM_CXICON As Long = 11
+Private Const SM_CYICON As Long = 12
 
 ' --- git graph lanes ----------------------------------------------------
 
@@ -58,22 +60,30 @@ End Function
 ' --- Modernizr dialog icon ----------------------------------------------
 
 ' Brand a captioned dialog with the Modernizr icon (group 101 in
-' VB6Modernizr.res). LoadResPicture gives the 32px frame (Alt-Tab, and
-' VB's scaled-down title-bar fallback); when running compiled we also
-' fetch the true 16px frame so the title bar is crisp. In the IDE the
-' DLL module does not exist, so the fallback quietly stands.
+' VB6Modernizr.res). Form.Icon covers Alt-Tab and VB's own paths;
+' WM_SETICON with the true 16px frame keeps the title bar crisp.
+'
+' Every form gets its OWN picture and HICONs: VB destroys a window's
+' icon handles when the form unloads, so sharing one set means the
+' first Unload (the About box) kills the icons on every other form.
+' Never assigns a failed load - the form keeps its previous icon.
+' In the IDE the DLL module does not exist, so only the resource
+' picture (available uncompiled too) is applied.
 Public Sub Theme_ApplyIcon(frm As Form)
     On Error Resume Next
-    If mDlgIcon Is Nothing Then Set mDlgIcon = LoadResPicture(101, vbResIcon)
-    Set frm.Icon = mDlgIcon
+    Dim pic As StdPicture
+    Set pic = LoadResPicture(101, vbResIcon)
+    If Not pic Is Nothing Then Set frm.Icon = pic
 
-    If mDlgIcon16 = 0 Then
-        Dim hMod As Long
-        hMod = GetModuleHandleA("VB6Modernizr.dll")
-        If hMod <> 0 Then mDlgIcon16 = LoadImageA(hMod, 101, IMAGE_ICON, _
-            ScaleForDpi(16), ScaleForDpi(16), 0)
-    End If
-    If mDlgIcon16 <> 0 Then SendMessageA frm.hwnd, WM_SETICON, ICON_SMALL, mDlgIcon16
+    Dim hMod As Long, h As Long
+    hMod = GetModuleHandleA("VB6Modernizr.dll")
+    If hMod = 0 Then Exit Sub
+    h = LoadImageA(hMod, 101, IMAGE_ICON, _
+        GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0)
+    If h <> 0 Then SendMessageA frm.hwnd, WM_SETICON, ICON_SMALL, h
+    h = LoadImageA(hMod, 101, IMAGE_ICON, _
+        GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0)
+    If h <> 0 Then SendMessageA frm.hwnd, WM_SETICON, ICON_BIG, h
 End Sub
 
 ' --- shell icon cache ---------------------------------------------------
@@ -160,9 +170,6 @@ End Sub
 
 Public Sub Theme_FreeIcons()
     On Error Resume Next
-    If mDlgIcon16 <> 0 Then DestroyIcon mDlgIcon16
-    mDlgIcon16 = 0
-    Set mDlgIcon = Nothing
     Dim v As Variant
     If mIcons Is Nothing Then Exit Sub
     For Each v In mIcons
