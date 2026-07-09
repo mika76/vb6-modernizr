@@ -1,10 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="VB6 Modernizr icon">
-  <title>VB6 Modernizr icon (128 px master)</title>
-  <!-- Use this at 48 px and above; icon-32.svg and icon-16.svg are pixel-hinted redraws. -->
+  <title>VB6 Modernizr icon (128 px master) — "The Gutter"</title>
+  <!-- A VB6 code window with the add-in's features arriving: glossy line-number
+       margin, dotted indentation guide, spell-check squiggle.
+       Use at 48 px and above; icon-32.svg and icon-16.svg are pixel-hinted redraws. -->
   <defs>
-    <pattern id="grid" width="9" height="9" patternUnits="userSpaceOnUse">
-      <circle cx="4.5" cy="4.5" r="1.2" fill="#808080"/>
-    </pattern>
     <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#000080"/><stop offset="1" stop-color="#1084d0"/>
     </linearGradient>
@@ -14,34 +13,31 @@
       <stop offset=".52" stop-color="#0a7ad0"/>
       <stop offset="1" stop-color="#36b0f4"/>
     </linearGradient>
-    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d9edff"/>
-    </linearGradient>
-    <radialGradient id="btn" cx=".35" cy=".3" r=".9">
-      <stop offset="0" stop-color="#ffb3a7"/><stop offset=".55" stop-color="#f2503c"/><stop offset="1" stop-color="#c81e0a"/>
-    </radialGradient>
-    <clipPath id="cutL"><polygon points="0,0 84,0 46,128 0,128"/></clipPath>
-    <clipPath id="cutR"><polygon points="84,0 128,0 128,128 46,128"/></clipPath>
   </defs>
 
-  <g clip-path="url(#cutL)">
-    <rect x="4" y="8" width="120" height="112" fill="#d4d0c8" stroke="#808080" stroke-width="3"/>
-    <path d="M6.5,118 L6.5,10.5 L122,10.5" stroke="#ffffff" stroke-width="3" fill="none"/>
-    <rect x="11" y="15" width="106" height="19" fill="url(#cap)"/>
-    <rect x="17" y="21" width="30" height="6" fill="#ffffff" opacity=".92"/>
-    <rect x="11" y="40" width="106" height="74" fill="url(#grid)"/>
-    <rect x="18" y="52" width="34" height="15" fill="#d4d0c8" stroke="#808080"/>
-    <path d="M18.5,66 L18.5,52.5 L52,52.5" stroke="#ffffff" fill="none"/>
-  </g>
-  <g clip-path="url(#cutR)">
-    <rect x="4" y="8" width="120" height="112" rx="18" fill="url(#glass)" stroke="#0a7ad0" stroke-width="2.5"/>
-    <path d="M46,8 H106 A18,18 0 0 1 124,26 V35 H46 Z" fill="url(#aqua)"/>
-    <rect x="52" y="11" width="66" height="10" rx="5" fill="#ffffff" opacity=".38"/>
-    <circle cx="107" cy="21.5" r="7" fill="url(#btn)" stroke="#8f1200" stroke-width=".8"/>
-    <path d="M104,18.5 L110,24.5 M110,18.5 L104,24.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
-    <rect x="72" y="86" width="42" height="18" rx="9" fill="url(#aqua)" opacity=".95"/>
-    <rect x="76" y="88.5" width="34" height="6" rx="3" fill="#ffffff" opacity=".4"/>
-    <ellipse cx="96" cy="42" rx="40" ry="18" fill="#ffffff" opacity=".28"/>
-  </g>
-  <line x1="84" y1="6" x2="46" y2="122" stroke="#ffffff" stroke-width="2.5" opacity=".85"/>
+  <rect x="4" y="8" width="120" height="112" fill="#d4d0c8" stroke="#808080" stroke-width="3"/>
+  <path d="M6.5,118 L6.5,10.5 L122,10.5" stroke="#ffffff" stroke-width="3" fill="none"/>
+  <rect x="11" y="15" width="106" height="19" fill="url(#cap)"/>
+  <rect x="17" y="21" width="30" height="6" fill="#ffffff" opacity=".92"/>
+  <rect x="11" y="38" width="106" height="76" fill="#ffffff" stroke="#808080"/>
+
+  <!-- glossy line-number gutter -->
+  <rect x="11" y="38" width="24" height="76" fill="url(#aqua)"/>
+  <rect x="13" y="40" width="4" height="72" fill="#ffffff" opacity=".35"/>
+  <text x="24" y="52" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="11" fill="#ffffff">1</text>
+  <text x="24" y="64" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="11" fill="#ffffff">2</text>
+  <text x="24" y="76" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="11" fill="#ffffff">3</text>
+  <text x="24" y="88" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="11" fill="#ffffff">4</text>
+  <text x="24" y="100" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="11" fill="#ffffff">5</text>
+
+  <!-- code lines: keyword blue, text, comment green -->
+  <rect x="40" y="45" width="34" height="5" fill="#0000c8"/>
+  <rect x="48" y="57" width="46" height="5" fill="#3a3a3a"/>
+  <rect x="48" y="69" width="38" height="5" fill="#3a3a3a"/>
+  <rect x="48" y="81" width="40" height="5" fill="#008000"/>
+  <rect x="40" y="93" width="26" height="5" fill="#0000c8"/>
+
+  <!-- indentation guide + squiggle -->
+  <line x1="44.5" y1="55" x2="44.5" y2="91" stroke="#9aa0a6" stroke-dasharray="2 3"/>
+  <path d="M48,66 q3,-3.5 6,0 t6,0 t6,0 t6,0 t6,0 t6,0 t6,0" fill="none" stroke="#e60000" stroke-width="1.8" stroke-linecap="round"/>
 </svg>

@@ -1,3 +1,6 @@
+
+![Logo](images/logo.svg)
+
 # VB6 Modernizr
 
 A Visual Basic 6 IDE add-in, written in VB6 itself, that brings modern
