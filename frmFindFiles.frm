@@ -12,50 +12,50 @@ Begin VB.Form frmFindFiles
    StartUpPosition =   2  'CenterScreen
    Begin VB.TextBox txtFind
       Height          =   315
-      Left            =   960
+      Left            =   1020
       TabIndex        =   1
-      Top             =   120
+      Top             =   150
       Width           =   4600
    End
    Begin VB.CheckBox chkCase
       Caption         =   "Match &case"
       Height          =   255
-      Left            =   5760
+      Left            =   5820
       TabIndex        =   2
-      Top             =   150
+      Top             =   180
       Width           =   1500
    End
    Begin VB.CheckBox chkWhole
       Caption         =   "&Whole word"
       Height          =   255
-      Left            =   7320
+      Left            =   7380
       TabIndex        =   3
-      Top             =   150
+      Top             =   180
       Width           =   1500
    End
    Begin VB.CheckBox chkRegex
       Caption         =   "Rege&x"
       Height          =   255
-      Left            =   5760
+      Left            =   5820
       TabIndex        =   4
-      Top             =   570
+      Top             =   630
       Width           =   1500
    End
    Begin VB.TextBox txtPatterns
       Height          =   315
-      Left            =   960
+      Left            =   1020
       TabIndex        =   6
       Text            =   "*.bas;*.cls;*.frm;*.ctl;*.dob;*.pag;*.dsr;*.vbp;*.vbg"
-      Top             =   540
+      Top             =   600
       Width           =   4600
    End
    Begin VB.OptionButton optRoot
       Caption         =   "Active &project folder"
       Height          =   255
       Index           =   0
-      Left            =   120
+      Left            =   180
       TabIndex        =   7
-      Top             =   1020
+      Top             =   1110
       Value           =   -1  'True
       Width           =   2200
    End
@@ -63,65 +63,67 @@ Begin VB.Form frmFindFiles
       Caption         =   "F&older:"
       Height          =   255
       Index           =   1
-      Left            =   2460
+      Left            =   2520
       TabIndex        =   8
-      Top             =   1020
+      Top             =   1110
       Width           =   900
    End
    Begin VB.TextBox txtFolder
       Height          =   315
-      Left            =   3420
+      Left            =   3480
       TabIndex        =   9
-      Top             =   980
-      Width           =   4400
+      Top             =   1070
+      Width           =   4340
    End
    Begin VB.CommandButton cmdBrowse
       Caption         =   "..."
       Height          =   315
       Left            =   7880
       TabIndex        =   10
-      Top             =   980
+      Top             =   1070
       Width           =   400
    End
    Begin VB.CommandButton cmdSearch
       Caption         =   "&Search"
       Default         =   -1  'True
       Height          =   360
-      Left            =   8460
+      Left            =   8420
       TabIndex        =   11
-      Top             =   960
+      Top             =   1050
       Width           =   1000
    End
-   Begin VB.ListBox lstResults
-      Height          =   4400
-      Left            =   120
+   Begin VB6Modernizr.ucList lstResults
+      Height          =   4300
+      Left            =   180
       TabIndex        =   12
-      Top             =   1440
-      Width           =   9360
+      Top             =   1560
+      Width           =   9240
+      _ExtentX        =   16298
+      _ExtentY        =   7585
    End
    Begin VB.Label lblFind
       Caption         =   "Fi&nd:"
       Height          =   240
-      Left            =   120
+      Left            =   180
       TabIndex        =   0
-      Top             =   165
+      Top             =   195
       Width           =   800
    End
    Begin VB.Label lblPat
       Caption         =   "&Files:"
       Height          =   240
-      Left            =   120
+      Left            =   180
       TabIndex        =   5
-      Top             =   585
+      Top             =   645
       Width           =   800
    End
    Begin VB.Label lblStatus
       Caption         =   ""
       Height          =   255
-      Left            =   120
+      Left            =   180
       TabIndex        =   13
-      Top             =   6120
-      Width           =   9360
+      Top             =   6060
+      Width           =   9240
    End
 End
 Attribute VB_Name = "frmFindFiles"
@@ -137,8 +139,6 @@ Option Explicit
 '  jump to it; files that belong to the open project group open in the
 '  IDE at the right line, anything else opens in Notepad.
 ' =====================================================================
-
-Private Const LB_SETHORIZONTALEXTENT As Long = &H194
 
 ' --- folder browse dialog ---
 Private Type BROWSEINFO
@@ -178,10 +178,6 @@ Public Sub ShowDialog()
     txtFind.SetFocus
 End Sub
 
-Private Sub Form_Load()
-    SendMessageA lstResults.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
-End Sub
-
 Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         mCancel = True
@@ -193,10 +189,10 @@ End Sub
 Private Sub Form_Resize()
     On Error Resume Next
     If Me.WindowState = vbMinimized Then Exit Sub
-    lstResults.Width = Me.ScaleWidth - 240
-    lstResults.Height = Me.ScaleHeight - lstResults.Top - 500
-    lblStatus.Top = Me.ScaleHeight - 380
-    lblStatus.Width = Me.ScaleWidth - 240
+    lstResults.Width = Me.ScaleWidth - MARGIN_STD * 2
+    lstResults.Height = Me.ScaleHeight - lstResults.Top - 560
+    lblStatus.Top = Me.ScaleHeight - 420
+    lblStatus.Width = Me.ScaleWidth - MARGIN_STD * 2
 End Sub
 
 Private Sub cmdBrowse_Click()
@@ -354,7 +350,7 @@ Private Sub AddResult(ByVal path As String, ByVal lineNo As Long, _
     mFile(mResCount) = path
     mLine(mResCount) = lineNo
     mResCount = mResCount + 1
-    lstResults.AddItem display
+    lstResults.AddItem display, , path
 End Sub
 
 Private Function MidPath(ByVal path As String, ByVal root As String) As String
@@ -465,3 +461,7 @@ Private Function BrowseFolder() As String
         CoTaskMemFree pidl
     End If
 End Function
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
+End Sub

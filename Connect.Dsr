@@ -1,5 +1,5 @@
 VERSION 5.00
-Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect
+Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect 
    ClientHeight    =   6000
    ClientLeft      =   1740
    ClientTop       =   1545
@@ -14,6 +14,7 @@ Begin {AC0714F6-3D04-11D1-AE7D-00A0C90F26F4} Connect
    LoadName        =   "Startup"
    LoadBehavior    =   1
    RegLocation     =   "HKEY_CURRENT_USER\Software\Microsoft\Visual Basic\6.0"
+   CmdLineSupport  =   -1  'True
 End
 Attribute VB_Name = "Connect"
 Attribute VB_GlobalNameSpace = False
@@ -70,14 +71,18 @@ Private Sub InitAddin()
     AddMenus
     Wheel_Init
     Guides_Init
+    LineNums_Init
     Backup_Init
     TabBar_Init
+    Menu_SyncToggles
 End Sub
 
 Private Sub TermAddin()
     On Error Resume Next
     Highlight_Terminate
     Wheel_Term
+    ' release the gutter strip before the MDI hook goes away
+    gLineNumsEnabled = False
     TabBar_Term
     Unhook_All
 
@@ -89,10 +94,15 @@ Private Sub TermAddin()
     Unload frmBrowser
     Unload frmChanges
     Unload frmGitLog
+    Unload frmGutter
+    Unload frmAbout
+
+    Theme_FreeIcons
 
     If Not mMenuPopup Is Nothing Then mMenuPopup.Delete
     Set mMenuPopup = Nothing
     Set mButtons = Nothing
+    Menu_ClearToggles
 
     Set gVBE = Nothing
     Set VBInstance = Nothing
@@ -136,8 +146,9 @@ Private Sub AddMenus()
 
     AddBtn "Clear &Highlights", "clearhl", True
     AddBtn "Show/Hide &Tabs", "tabs", False
-    AddBtn "Indentation G&uides (toggle)", "guides", False
-    AddBtn "Auto-Backu&p (toggle)", "backup", False
+    AddBtn "Indentation G&uides", "guides", False
+    AddBtn "Line &Numbers", "linenums", False
+    AddBtn "Auto-Backu&p", "backup", False
     AddBtn "Backup No&w", "backupnow", False
 
     AddBtn "&Keyboard Shortcuts... (Ctrl+Shift+/)", "keys", True
@@ -155,4 +166,10 @@ Private Sub AddBtn(ByVal cap As String, ByVal act As String, _
     mb.Action = act
     Set mb.evt = VBInstance.Events.CommandBarEvents(btn)
     mButtons.Add mb
+
+    ' on/off commands show a check mark tracking their flag
+    Select Case act
+    Case "tabs", "guides", "linenums", "backup"
+        Menu_RegisterToggle act, btn
+    End Select
 End Sub

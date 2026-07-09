@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="VB6 Modernizr icon">
+  <title>VB6 Modernizr icon (32 px, pixel-hinted) — "The Gutter"</title>
+  <defs>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000080"/><stop offset="1" stop-color="#1084d0"/>
+    </linearGradient>
+    <linearGradient id="aqua" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8be0ff"/>
+      <stop offset=".48" stop-color="#39aef0"/>
+      <stop offset=".52" stop-color="#0a7ad0"/>
+      <stop offset="1" stop-color="#36b0f4"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="1" y="1" width="30" height="30" fill="#d4d0c8" stroke="#808080" stroke-width="2"/>
+  <path d="M3,29 V3 H29" stroke="#ffffff" stroke-width="1.5" fill="none"/>
+  <rect x="3.5" y="3.5" width="25" height="5" fill="url(#cap)"/>
+  <rect x="5" y="5" width="8" height="2" fill="#ffffff"/>
+  <rect x="3.5" y="10.5" width="25" height="18" fill="#ffffff"/>
+
+  <!-- gutter with line-number ticks -->
+  <rect x="3.5" y="10.5" width="6" height="18" fill="url(#aqua)"/>
+  <rect x="4.5" y="11.5" width="1.5" height="16" fill="#ffffff" opacity=".35"/>
+  <rect x="5.5" y="13.5" width="2" height="1" fill="#ffffff"/>
+  <rect x="5.5" y="18.5" width="2" height="1" fill="#ffffff"/>
+  <rect x="5.5" y="23.5" width="2" height="1" fill="#ffffff"/>
+
+  <!-- code lines -->
+  <rect x="11" y="13" width="9" height="2" fill="#0000c8"/>
+  <rect x="13" y="18" width="12" height="2" fill="#3a3a3a"/>
+  <rect x="13" y="23" width="10" height="2" fill="#008000"/>
+
+  <!-- indent guide + squiggle -->
+  <line x1="12.25" y1="17" x2="12.25" y2="25" stroke="#9aa0a6" stroke-width=".75" stroke-dasharray="1.5 2"/>
+  <path d="M13,21.5 q1.5,-1.6 3,0 t3,0 t3,0 t3,0" fill="none" stroke="#e60000" stroke-width="1" stroke-linecap="round"/>
+</svg>

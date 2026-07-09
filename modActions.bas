@@ -4,7 +4,43 @@ Option Explicit
 ' =====================================================================
 '  Central command dispatcher: menu items (clsMenuButton) and any
 '  future toolbar buttons route here by action name.
+'
+'  Toggle menu items (tabs / guides / backup) register their
+'  CommandBarButton here so their checked state can track the flag.
 ' =====================================================================
+
+Private Const msoButtonUp As Long = 0
+Private Const msoButtonDown As Long = -1
+
+Private mToggleBtns As Collection   ' CommandBarButtons keyed by action
+
+Public Sub Menu_RegisterToggle(ByVal act As String, btn As Object)
+    On Error Resume Next
+    If mToggleBtns Is Nothing Then Set mToggleBtns = New Collection
+    mToggleBtns.Add btn, act
+End Sub
+
+Public Sub Menu_ClearToggles()
+    Set mToggleBtns = Nothing
+End Sub
+
+' Reflect the current on/off flags as menu check marks.
+Public Sub Menu_SyncToggles()
+    On Error Resume Next
+    SetToggleState "tabs", gTabBarVisible
+    SetToggleState "guides", gGuidesEnabled
+    SetToggleState "linenums", gLineNumsEnabled
+    SetToggleState "backup", Backup_Enabled()
+End Sub
+
+Private Sub SetToggleState(ByVal act As String, ByVal onOff As Boolean)
+    On Error Resume Next
+    If mToggleBtns Is Nothing Then Exit Sub
+    Dim btn As Object
+    Set btn = mToggleBtns(act)
+    If btn Is Nothing Then Exit Sub
+    btn.State = IIf(onOff, msoButtonDown, msoButtonUp)
+End Sub
 
 Public Sub DoAction(ByVal act As String)
     On Error Resume Next
@@ -29,14 +65,12 @@ Public Sub DoAction(ByVal act As String)
     Case "clearhl":   Highlight_Clear
     Case "tabs":      TabBar_Toggle
     Case "guides":    Guides_Toggle
+    Case "linenums":  LineNums_Toggle
     Case "backup":    Backup_Toggle
     Case "backupnow": Backup_Now True
     Case "keys":      frmShortcuts.ShowSheet
-    Case "about":
-        MsgBox "VB6 Modernizr 1.1" & vbCrLf & vbCrLf & _
-               "MDI window tabs, find/replace bar with highlighting," & vbCrLf & _
-               "find in files, references, editing shortcuts and" & vbCrLf & _
-               "mouse wheel scrolling for the VB6 IDE.", _
-               vbInformation, "VB6 Modernizr"
+    Case "about":     frmAbout.ShowAbout
     End Select
+
+    Menu_SyncToggles
 End Sub

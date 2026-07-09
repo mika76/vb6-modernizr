@@ -25,6 +25,10 @@ Public Sub Backup_Init()
     mLastBackup = CDate(Val(GetSetting("VB6Modernizr", "Backup", "Last", "0")))
 End Sub
 
+Public Function Backup_Enabled() As Boolean
+    Backup_Enabled = mEnabled
+End Function
+
 Public Sub Backup_Toggle()
     On Error Resume Next
     mEnabled = Not mEnabled

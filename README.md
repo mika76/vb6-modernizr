@@ -1,3 +1,6 @@
+
+![Logo](images/logo.svg)
+
 # VB6 Modernizr
 
 A Visual Basic 6 IDE add-in, written in VB6 itself, that brings modern
@@ -14,9 +17,9 @@ Browser-style tab bar above the code/designer area, drawn in the
 classic VB6 3D look. Left click activates (windows are kept maximized
 while tabs are on), middle click closes, drag reorders, right click
 offers Close / Close Others / Close All / Copy Full Path / Open
-Containing Folder. Tabs show a type glyph (blue = code, green =
-designer), a `*` for unsaved changes, and an orange dot when the file
-is modified vs git HEAD. The `▼` button lists every window when tabs
+Containing Folder. Tabs show the file's shell icon, a `*` for unsaved
+changes, and an orange badge on the icon corner when the file is
+modified vs git HEAD. The `▼` button lists every window when tabs
 overflow; the right end shows the current git branch (`master *` when
 dirty).
 
@@ -35,8 +38,11 @@ and marks it on the vertical scrollbar (orange).
 ### Find in Files
 Scans the codebase on disk — including designer sections of
 `.frm`/`.ctl`/`.dsr` and project files — under the project folder or
-any folder. Double-click jumps to the exact line (header offset
-compensated); files outside the loaded project group open in Notepad.
+any folder. Results show file icons; double-click jumps to the exact
+line (header offset compensated); files outside the loaded project
+group open in Notepad.
+
+![find in files](images/find-in-files.png)
 
 ### Navigation
 Go to Definition (F12; several candidates open a results list),
@@ -45,7 +51,9 @@ persistent bookmarks (Ctrl+F2 toggle / F2 next; blue margin squares +
 scrollbar marks; stored in `<project>.vbp.bookmarks` beside the .vbp
 and re-anchored after edits via a line-text snapshot), a Code Browser
 of procedures/TODOs with live filter (Ctrl+Shift+O), and a Ctrl+Tab
-MRU window switcher (hold Ctrl, Tab cycles, release commits).
+MRU window switcher (hold Ctrl, Tab cycles, release commits) showing
+file icons and an orange dot on git-modified files. Result lists use
+custom-drawn controls with shell file icons throughout.
 
 ### Editing shortcuts
 Duplicate line (Ctrl+D), move lines up/down (Alt+Up/Down), delete
@@ -58,17 +66,21 @@ Repo auto-detected from the project folder; everything shells out to
 `git.exe` asynchronously (hidden process, output polled by a timer),
 so the IDE never blocks. Status refreshes every ~5 s.
 
-- **Changes window** (Ctrl+Shift+G): staged/unstaged lists with
-  multi-select stage/unstage (selected or all); Commit commits the
-  staged set; double-click opens the file.
-- **Log** (Ctrl+Shift+L): `git log --graph` (git draws the graph) in
-  a monospace list, optional all-branches; click a commit for its
-  message + diffstat.
+- **Changes window** (Ctrl+Shift+G): staged/unstaged lists (file
+  icons, multi-select) with stage/unstage selected or all; Commit
+  commits the staged set; double-click opens the file. Selection and
+  scroll position survive the background status refresh.
+- **Log** (Ctrl+Shift+L): commit graph drawn by the add-in — colored
+  branch lanes, rings for merges, branch/tag/HEAD chips — with
+  hash/date/author/subject columns, optional all-branches; click a
+  commit for its message + diffstat.
 - **Blame** (Ctrl+Shift+B): commit/author/date/summary for the
   current line.
 - **Changed-line markers**: margin bars (green = added, blue =
   modified, red = deletion below) and scrollbar marks, computed from
   `git diff -U0` against HEAD. Reflects the *saved* file.
+
+![git markers](images/git-markers.png)
 
 ### Extras
 - **Mouse wheel scrolling** in code windows (Shift+wheel horizontal) —
@@ -77,6 +89,16 @@ so the IDE never blocks. Status refreshes every ~5 s.
   lines per indent step, bridging blank lines.
 
 ![indentation guides](images/indentation-guides.png)
+
+  
+- **Line numbers** (menu toggle, default off): a real gutter strip is
+  reserved left of the editor for maximized windows; floating windows
+  fall back to small numbers in the indicator margin. These are
+  code-module line numbers — the same numbering the IDE reports in
+  error messages — not file lines (the designer block and `Attribute`
+  headers only exist on disk, the editor never shows them).
+
+  ![line numbers](images/line-numbers.png)
   
 - **Auto-backup** (menu toggle, default on): every 10 minutes, if
   project files changed, zips the project folder to
@@ -85,7 +107,9 @@ so the IDE never blocks. Status refreshes every ~5 s.
 
 ### Discoverability
 Every command sits in the **Modernizr** menu with its shortcut in the
-caption, and **Ctrl+Shift+/** opens a keyboard cheat sheet.
+caption; on/off commands (tabs, guides, line numbers, auto-backup)
+show a check mark reflecting their state. **Ctrl+Shift+/** opens a
+keyboard cheat sheet.
 
 ![menu](images/menu.png)
 
@@ -127,6 +151,13 @@ physical `/` key of US-style layouts.
    COM registration succeeds). The Add-In Designer registers the
    add-in automatically at compile time.
 
+Command-line build (avoids the UAC prompt if VB6.EXE is flagged
+run-as-administrator):
+
+```bat
+cmd /c "set __COMPAT_LAYER=RunAsInvoker&& "C:\Program Files (x86)\Microsoft Visual Studio\VB98\VB6.EXE" /make VB6Modernizr.vbp /out build.log"
+```
+
 ## Installing / loading
 
 1. Restart VB6, then *Add-Ins → Add-In Manager…* — select
@@ -144,7 +175,8 @@ To uninstall: unload it in the Add-In Manager, then
 ## Files the add-in writes
 
 - `HKCU\...\VB and VBA Program Settings\VB6Modernizr` — persisted
-  options (guides on/off, backup on/off + last-backup time).
+  options (guides on/off, line numbers on/off, backup on/off +
+  last-backup time).
 - `<project>.vbp.bookmarks` — bookmark sidecar, one per project.
 - `<project folder>\.backups\` — rotated backup zips.
 

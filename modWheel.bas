@@ -61,7 +61,22 @@ Private Function WheelGetMsgProc(ByVal nCode As Long, ByVal wParam As Long, _
             If StrComp(WndClass(H), CLS_CODEPANE, vbTextCompare) = 0 Then
                 ScrollPane H, HiWordSigned(m.wParam), (m.wParam And 4) <> 0 ' MK_SHIFT
                 swallow = True
+            ElseIf Scroll_IsHost(H) Then
+                ' wheel over a custom list scrolls it even unfocused
+                Scroll_Wheel H, HiWordSigned(m.wParam)
+                swallow = True
             End If
+        Case WM_MOUSEMOVE
+            ' scrollbar thumb tracking: the bar's modal loop retrieves
+            ' these moves without dispatching them, repainting over our
+            ' tick marks. Post a marker; the loop DOES dispatch posted
+            ' messages, and it arrives after the thumb repaint.
+            If GetCapture() = m.hwnd And Hook_IsHooked(m.hwnd) Then
+                If StrComp(WndClass(m.hwnd), "ScrollBar", vbTextCompare) = 0 Then
+                    PostMessageA m.hwnd, WM_APP_SBTICKS, 0, 0
+                End If
+            End If
+
         Case WM_KEYDOWN
             swallow = HandleKeyDown(m)
         Case WM_SYSKEYDOWN

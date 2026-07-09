@@ -10,20 +10,22 @@ Begin VB.Form frmRefs
    ScaleWidth      =   8400
    ShowInTaskbar   =   0   'False
    StartUpPosition =   2  'CenterScreen
-   Begin VB.ListBox lstRefs
-      Height          =   3400
-      Left            =   120
+   Begin VB6Modernizr.ucList lstRefs
+      Height          =   3300
+      Left            =   180
       TabIndex        =   0
-      Top             =   120
-      Width           =   8160
+      Top             =   180
+      Width           =   8040
+      _ExtentX        =   14182
+      _ExtentY        =   5821
    End
    Begin VB.Label lblStatus
       Caption         =   ""
       Height          =   255
-      Left            =   120
+      Left            =   180
       TabIndex        =   1
-      Top             =   3840
-      Width           =   8160
+      Top             =   3780
+      Width           =   8040
    End
 End
 Attribute VB_Name = "frmRefs"
@@ -38,8 +40,6 @@ Option Explicit
 '  from modSearch; double-click jumps to the reference.
 ' =====================================================================
 
-Private Const LB_SETHORIZONTALEXTENT As Long = &H194
-
 Private mRefs() As MatchInfo
 Private mCount As Long
 
@@ -47,7 +47,6 @@ Public Sub ShowRefs(ByVal word As String, _
         Optional ByVal verb As String = "References to")
     On Error Resume Next
     Load Me
-    SendMessageA lstRefs.hwnd, LB_SETHORIZONTALEXTENT, 3000, 0
     SetWindowLongA Me.hwnd, GWL_HWNDPARENT, MainHwnd()
 
     mRefs = gMatches
@@ -58,7 +57,8 @@ Public Sub ShowRefs(ByVal word As String, _
     Dim i As Long
     For i = 0 To mCount - 1
         lstRefs.AddItem mRefs(i).Comp & "(" & mRefs(i).LineNum & "): " & _
-                        Left$(Trim$(mRefs(i).LineText), 250)
+                        Left$(Trim$(mRefs(i).LineText), 250), , _
+                        FileForComponent(mRefs(i).Comp)
     Next
     lblStatus.Caption = mCount & " item(s) in the active project."
 
@@ -91,8 +91,12 @@ End Sub
 Private Sub Form_Resize()
     On Error Resume Next
     If Me.WindowState = vbMinimized Then Exit Sub
-    lstRefs.Width = Me.ScaleWidth - 240
-    lstRefs.Height = Me.ScaleHeight - lstRefs.Top - 500
-    lblStatus.Top = Me.ScaleHeight - 380
-    lblStatus.Width = Me.ScaleWidth - 240
+    lstRefs.Width = Me.ScaleWidth - MARGIN_STD * 2
+    lstRefs.Height = Me.ScaleHeight - lstRefs.Top - 560
+    lblStatus.Top = Me.ScaleHeight - 420
+    lblStatus.Width = Me.ScaleWidth - MARGIN_STD * 2
+End Sub
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
 End Sub

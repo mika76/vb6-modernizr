@@ -23,20 +23,20 @@ Begin VB.Form frmShortcuts
          Italic          =   0   'False
          Strikethrough   =   0   'False
       EndProperty
-      Height          =   4740
-      Left            =   120
+      Height          =   4680
+      Left            =   180
       TabIndex        =   0
-      Top             =   120
-      Width           =   6560
+      Top             =   180
+      Width           =   6440
    End
    Begin VB.CommandButton cmdClose
       Cancel          =   -1  'True
       Caption         =   "Close"
       Default         =   -1  'True
       Height          =   360
-      Left            =   5560
+      Left            =   5500
       TabIndex        =   1
-      Top             =   5100
+      Top             =   5070
       Width           =   1120
    End
 End

@@ -68,8 +68,6 @@ Option Explicit
 ' =====================================================================
 
 Private Const DROPBTN_W As Long = 20
-Private Const COLOR_CODE As Long = &HB45A00     ' blue square = code
-Private Const COLOR_DESIGN As Long = &H3C8C1E   ' green square = designer
 
 Private mWins As Collection      ' of VBIDE.Window, tab order
 Private mSig As String           ' change-detection signature
@@ -121,6 +119,7 @@ Private Sub tmrRefresh_Timer()
     Git_Poll
     Backup_Poll
     Highlight_EnsureHooks
+    If gLineNumsEnabled Then frmGutter.Poll
 End Sub
 
 ' external state (git) changed: repaint on the next tick
@@ -289,7 +288,7 @@ TryLayout:
     Me.FontBold = True
     For i = mScroll To n
         cap = TabDispCaption(mWins(i))
-        tw = Me.TextWidth(cap) + 26
+        tw = Me.TextWidth(cap) + ScaleForDpi(35)
         If tw < ScaleForDpi(60) Then tw = ScaleForDpi(60)
         If tw > ScaleForDpi(200) Then tw = ScaleForDpi(200)
         If x + tw > avail Then Exit For
@@ -320,6 +319,9 @@ TryLayout:
         Me.Print gitLbl
         Me.ForeColor = vbButtonText
     End If
+
+    ' icons are drawn via the API, so VB must be told to flush
+    Me.Refresh
 End Sub
 
 Private Function TabCaption(ByVal w As VBIDE.Window) As String
@@ -346,19 +348,20 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
         Me.Line (r, 6)-(r, H - 6), vb3DShadow
     End If
 
-    ' type glyph: small colored square
-    Dim gy As Long, gc As Long
+    ' shell file icon for the component behind this window
+    Dim gy As Long
     gy = H \ 2
-    gc = IIf(w.Type = vbext_wt_CodeWindow, COLOR_CODE, COLOR_DESIGN)
-    Me.Line (l + 6, gy - 3)-(l + 12, gy + 3), gc, BF
+    DrawIcon16 Me.hdc, l + ScaleForDpi(5), gy - ScaleForDpi(8), _
+        IconForCaption(TabCaption(w))
 
-    ' orange dot above the glyph = file modified vs git HEAD
+    ' orange badge on the icon corner = file modified vs git HEAD
     Dim nm As String, pp As Long
     nm = TabCaption(w)
     pp = InStrRev(nm, " (")
     If pp > 0 Then nm = Left$(nm, pp - 1)
     If Git_IsCompChanged(nm) Then
-        Me.Line (l + 13, gy - 7)-(l + 17, gy - 3), &H157DE9, BF
+        Me.Line (l + ScaleForDpi(16), gy - ScaleForDpi(9))- _
+                (l + ScaleForDpi(21), gy - ScaleForDpi(4)), THEME_ACCENT, BF
     End If
 
     ' caption, clipped to the tab; measure in the style it draws in
@@ -366,12 +369,12 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     Me.FontBold = active
     full = TabDispCaption(w)
     cap = full
-    Do While Me.TextWidth(cap) > (r - l - 24) And Len(cap) > 1
+    Do While Me.TextWidth(cap) > (r - l - ScaleForDpi(33)) And Len(cap) > 1
         cap = Left$(cap, Len(cap) - 1)
     Loop
     If cap <> full Then cap = Left$(cap, Len(cap) - 1) & Chr$(133)
 
-    Me.CurrentX = l + 16
+    Me.CurrentX = l + ScaleForDpi(25)
     Me.CurrentY = (H - Me.TextHeight("X")) \ 2 + 1
     Me.ForeColor = vbButtonText
     Me.Print cap
