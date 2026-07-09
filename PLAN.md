@@ -6,6 +6,14 @@ highlight-all, find in files, navigation (definition, references,
 bookmarks, code browser, MRU switcher), editing shortcuts, full git
 integration (status, staging, commit, log graph, blame, line markers),
 mouse wheel scrolling, indentation guides, and auto-backup.
+
+A UI polish pass followed: shell file icons everywhere (tabs,
+switcher, all result lists via the custom `ucList` control), a
+custom-drawn Ctrl+Tab switcher, a self-drawn git log graph with
+branch lanes and ref chips, native scrollbars + wheel for custom
+lists (`modScroll`), menu check marks on toggles, flicker-free
+overlay painting, consistent dialog spacing, and optional line
+numbers with a real gutter strip.
 See README.md for the full feature reference and known limitations.
 
 ## Backlog (open, not yet scheduled)
@@ -15,8 +23,6 @@ See README.md for the full feature reference and known limitations.
 - [ ] Calibrate overlay geometry against the actual editor metrics
       instead of the empirical one-cell margin shift, if further
       off-by-a-bit reports come in.
-- [ ] Mouse-wheel scrolling inside ucList and the git log graph
-      (needs a subclass hook; keyboard + scrollbar work today).
 
 ## Conventions when adding a feature
 
@@ -29,5 +35,16 @@ See README.md for the full feature reference and known limitations.
   (`THEME_*` constants, `IconForFile`/`IconForComponent`); lists that
   need icons use the custom-drawn `ucList` control, not `VB.ListBox`
   (stock ListBoxes cannot be owner-drawn after creation).
+- Scrolling for custom-drawn surfaces goes through `modScroll`:
+  native WS_VSCROLL + SetScrollInfo, host exposes `ScrollTo(pos)`,
+  hover-wheel routed by the modWheel hook. Never use `VB.VScrollBar`
+  inside a UserControl (steals focus/arrow keys, non-native look).
+- Overlay repaints on scroll draw over the result (idempotent), never
+  full-invalidate — see the flicker notes in `modSubclass`. Scrollbar
+  tick redraws during thumb drag need the posted `WM_APP_SBTICKS`
+  marker (the drag runs a modal loop that eats mouse moves).
+- Strips reserved from the MDI client (tab bar top, line-number
+  gutter left) go through `modTabs.Layout_Update` + the
+  `hpMDIClient` adjust in `modSubclass`.
 - After editing any `.frm/.bas/.cls/.dsr/.vbp` outside the IDE,
   re-normalize to CRLF/ANSI or VB6 won't load it.
