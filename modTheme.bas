@@ -25,6 +25,21 @@ Public Const MARGIN_STD As Long = 180           ' twips, dialog edge margin
 
 Private mIcons As Collection    ' HICON keyed by "i" & extension
 
+' --- Modernizr dialog icon ----------------------------------------------
+
+Private Declare Function GetModuleHandleA Lib "kernel32" _
+    (ByVal lpModuleName As String) As Long
+Private Declare Function LoadImageA Lib "user32" _
+    (ByVal hInst As Long, ByVal lpszName As Long, ByVal uType As Long, _
+     ByVal cxDesired As Long, ByVal cyDesired As Long, ByVal fuLoad As Long) As Long
+
+Private Const IMAGE_ICON As Long = 1
+Private Const WM_SETICON As Long = &H80
+Private Const ICON_SMALL As Long = 0
+
+Private mDlgIcon As StdPicture  ' 32px resource icon, shared by all dialogs
+Private mDlgIcon16 As Long      ' HICON, true 16px title-bar frame
+
 ' --- git graph lanes ----------------------------------------------------
 
 Public Function LaneColor(ByVal lane As Long) As Long
@@ -39,6 +54,27 @@ Public Function LaneColor(ByVal lane As Long) As Long
         Case Else: LaneColor = &H1E78A0 ' brown
     End Select
 End Function
+
+' --- Modernizr dialog icon ----------------------------------------------
+
+' Brand a captioned dialog with the Modernizr icon (group 101 in
+' VB6Modernizr.res). LoadResPicture gives the 32px frame (Alt-Tab, and
+' VB's scaled-down title-bar fallback); when running compiled we also
+' fetch the true 16px frame so the title bar is crisp. In the IDE the
+' DLL module does not exist, so the fallback quietly stands.
+Public Sub Theme_ApplyIcon(frm As Form)
+    On Error Resume Next
+    If mDlgIcon Is Nothing Then Set mDlgIcon = LoadResPicture(101, vbResIcon)
+    Set frm.Icon = mDlgIcon
+
+    If mDlgIcon16 = 0 Then
+        Dim hMod As Long
+        hMod = GetModuleHandleA("VB6Modernizr.dll")
+        If hMod <> 0 Then mDlgIcon16 = LoadImageA(hMod, 101, IMAGE_ICON, _
+            ScaleForDpi(16), ScaleForDpi(16), 0)
+    End If
+    If mDlgIcon16 <> 0 Then SendMessageA frm.hwnd, WM_SETICON, ICON_SMALL, mDlgIcon16
+End Sub
 
 ' --- shell icon cache ---------------------------------------------------
 
@@ -124,6 +160,9 @@ End Sub
 
 Public Sub Theme_FreeIcons()
     On Error Resume Next
+    If mDlgIcon16 <> 0 Then DestroyIcon mDlgIcon16
+    mDlgIcon16 = 0
+    Set mDlgIcon = Nothing
     Dim v As Variant
     If mIcons Is Nothing Then Exit Sub
     For Each v In mIcons

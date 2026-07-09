@@ -226,3 +226,7 @@ Private Sub JumpToSelection()
     m.MatchLen = 0
     GoToMatch m
 End Sub
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
+End Sub

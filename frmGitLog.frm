@@ -578,3 +578,7 @@ Private Sub Form_Resize()
     UpdateScrollbar
     DrawGraph
 End Sub
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
+End Sub

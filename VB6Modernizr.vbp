@@ -29,6 +29,7 @@ Form=frmBrowser.frm
 Form=frmChanges.frm
 Form=frmGitLog.frm
 Form=frmGutter.frm
+ResFile32="VB6Modernizr.res"
 Startup="(None)"
 HelpFile=""
 Title="VB6Modernizr"

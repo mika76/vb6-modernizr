@@ -461,3 +461,7 @@ Private Function BrowseFolder() As String
         CoTaskMemFree pidl
     End If
 End Function
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
+End Sub

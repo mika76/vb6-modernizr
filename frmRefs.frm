@@ -96,3 +96,7 @@ Private Sub Form_Resize()
     lblStatus.Top = Me.ScaleHeight - 420
     lblStatus.Width = Me.ScaleWidth - MARGIN_STD * 2
 End Sub
+
+Private Sub Form_Load()
+    Theme_ApplyIcon Me
+End Sub

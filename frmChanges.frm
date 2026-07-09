@@ -146,6 +146,7 @@ Public Sub ShowChanges()
 End Sub
 
 Private Sub Form_Load()
+    Theme_ApplyIcon Me
     lstUnstaged.MultiSelect = True
     lstStaged.MultiSelect = True
 End Sub
