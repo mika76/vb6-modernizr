@@ -6,9 +6,10 @@ Option Explicit
 '
 '  - Mouse wheel scrolling over code panes (the editor ignores
 '    WM_MOUSEWHEEL); Shift+wheel scrolls horizontally.
-'  - Find bar keys: Ctrl+F open, F3/Shift+F3 next/prev, Esc close.
+'  - Find bar keys: Ctrl+F toggle, F3/Shift+F3 next/prev, Esc close.
 '  - Ctrl+Tab / Ctrl+Shift+Tab MRU window switcher (frmSwitcher);
 '    releasing Ctrl commits, Esc cancels.
+'  - Ctrl+P Quick Open fuzzy file/module palette (frmQuickOpen).
 '  - Editing shortcuts (modEditOps): Ctrl+D duplicate, Alt+Up/Down
 '    move lines, Ctrl+Shift+K delete lines, Ctrl+/ comment toggle,
 '    Shift+F12 find all references.
@@ -27,6 +28,7 @@ Private Const VK_G As Long = &H47
 Private Const VK_K As Long = &H4B
 Private Const VK_L As Long = &H4C
 Private Const VK_O As Long = &H4F
+Private Const VK_P As Long = &H50
 Private Const VK_F2 As Long = &H71
 Private Const VK_F3 As Long = &H72
 Private Const VK_F12 As Long = &H7B
@@ -115,6 +117,9 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
         If gSwitcherActive Then
             frmSwitcher.CancelSwitch
             HandleKeyDown = True
+        ElseIf QuickOpenVisible() Then
+            frmQuickOpen.Hide
+            HandleKeyDown = True
         ElseIf gFindBarVisible And FocusInCodePane() Then
             frmFind.HideBar
             HandleKeyDown = True
@@ -125,7 +130,11 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
             ' claim Ctrl+F from the code pane AND from the bar itself,
             ' or the IDE's accelerator opens its native Find dialog
             If FocusInCodePane() Or FocusInFindBar() Then
-                frmFind.ShowBar
+                If gFindBarVisible Then
+                    frmFind.HideBar
+                Else
+                    frmFind.ShowBar
+                End If
                 HandleKeyDown = True
             End If
         End If
@@ -162,6 +171,19 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
     Case VK_O
         If ctrl And shift And FocusInCodePane() Then
             frmBrowser.ShowBrowser
+            HandleKeyDown = True
+        End If
+
+    Case VK_P
+        ' claim Ctrl+P from the IDE (normally Print) for Quick Open.
+        ' Unlike the other shortcuts this works anywhere in the IDE
+        ' (Project Explorer included), but never in a running program.
+        If ctrl And Not shift And FocusInIDE() Then
+            If QuickOpenVisible() Then
+                frmQuickOpen.Hide
+            Else
+                frmQuickOpen.ShowQuickOpen
+            End If
             HandleKeyDown = True
         End If
 
@@ -221,6 +243,27 @@ Private Function HandleSysKeyDown(m As MSGSTRUCT) As Boolean
         Edit_MoveLinesDown
         HandleSysKeyDown = True
     End Select
+End Function
+
+Private Function QuickOpenVisible() As Boolean
+    On Error Resume Next
+    QuickOpenVisible = frmQuickOpen.Visible
+End Function
+
+' focus anywhere in the IDE main window hierarchy (code panes, docked
+' tool windows, owned add-in dialogs) - GetParent also climbs from an
+' owned top-level window to its owner. Windows of a program being run
+' in the IDE are unowned, so they never satisfy this.
+Private Function FocusInIDE() As Boolean
+    On Error Resume Next
+    Dim H As Long, hMain As Long
+    hMain = MainHwnd()
+    If hMain = 0 Then Exit Function
+    H = GetFocus()
+    Do While H <> 0
+        If H = hMain Then FocusInIDE = True: Exit Function
+        H = GetParent(H)
+    Loop
 End Function
 
 Private Function FocusInCodePane() As Boolean

@@ -221,6 +221,7 @@ End Sub
 Public Sub HideBar()
     On Error Resume Next
     FindBar_Hide
+    Highlight_Clear              ' closing the bar retires its highlights
     gVBE.ActiveCodePane.Window.SetFocus
 End Sub
 

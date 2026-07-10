@@ -174,7 +174,28 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     visLines = cp.CountOfVisibleLines
     topLine = cp.topLine
     If visLines < 1 Then Exit Sub
-    lineH = (rc.Bottom - rc.Top - yTop) \ visLines
+
+    ' The editor's scrollbars are children INSIDE the client area, so
+    ' the horizontal bar at the bottom must not count as text height:
+    ' on short panes (e.g. with the find bar docked) its extra rows
+    ' round the estimate one px too high, every overlay drifts
+    ' progressively down the window, and scroll redraws - no longer
+    ' landing on the blitted boxes - smear them into solid blocks.
+    Dim yBottom As Long, hHSB As Long
+    yBottom = rc.Bottom
+    hHSB = FindHScrollBarChild(hwnd)
+    If hHSB <> 0 Then
+        If IsWindowVisible(hHSB) Then
+            Dim rcSB As RECT, ptSB As POINTAPI
+            GetWindowRect hHSB, rcSB
+            ptSB.x = rcSB.Left
+            ptSB.y = rcSB.Top
+            ScreenToClient hwnd, ptSB
+            If ptSB.y > yTop And ptSB.y < yBottom Then yBottom = ptSB.y
+        End If
+    End If
+
+    lineH = (yBottom - yTop) \ visLines
     If lineH < 4 Then Exit Sub
 
     Dim hdc As Long

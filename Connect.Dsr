@@ -129,6 +129,7 @@ Private Sub AddMenus()
     AddBtn "&Go to Definition (F12)", "def", False
     AddBtn "Highlight Word at Cursor (Ctrl+F3)", "hlword", False
     AddBtn "Code Bro&wser... (Ctrl+Shift+O)", "browser", False
+    AddBtn "Go to F&ile... (Ctrl+P)", "quickopen", False
 
     AddBtn "Toggle Book&mark (Ctrl+F2)", "bmtoggle", True
     AddBtn "Next Bookmark (F2)", "bmnext", False

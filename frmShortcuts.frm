@@ -64,7 +64,7 @@ End Sub
 Private Sub Populate()
     lstKeys.Clear
     Hdr "FIND"
-    Row "Ctrl+F", "Open find / replace bar"
+    Row "Ctrl+F", "Show / hide find / replace bar"
     Row "Enter / Shift+Enter", "Find next / previous (in the bar)"
     Row "F3 / Shift+F3", "Find next / previous (anywhere)"
     Row "Ctrl+F3", "Highlight word at cursor everywhere"
@@ -76,6 +76,8 @@ Private Sub Populate()
     Row "Ctrl+F2", "Toggle bookmark on current line"
     Row "F2", "Next bookmark"
     Row "Ctrl+Shift+O", "Code browser (procedures / TODOs)"
+    Row "Ctrl+P", "Quick Open: fuzzy find file / module"
+    Row "", "  (Enter = code, Shift+Enter = designer)"
     Hdr ""
     Hdr "EDIT  (focus in code window)"
     Row "Ctrl+D", "Duplicate line / selection"

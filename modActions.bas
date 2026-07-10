@@ -51,6 +51,7 @@ Public Sub DoAction(ByVal act As String)
     Case "def":       Edit_GoToDefinition
     Case "hlword":    Edit_HighlightWord
     Case "browser":   frmBrowser.ShowBrowser
+    Case "quickopen": frmQuickOpen.ShowQuickOpen
     Case "bmtoggle":  BM_Toggle
     Case "bmnext":    BM_NextBookmark
     Case "bmclear":   BM_ClearAll

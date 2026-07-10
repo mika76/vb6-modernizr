@@ -50,10 +50,14 @@ Find All References (Shift+F12), Highlight Word at Cursor (Ctrl+F3),
 persistent bookmarks (Ctrl+F2 toggle / F2 next; blue margin squares +
 scrollbar marks; stored in `<project>.vbp.bookmarks` beside the .vbp
 and re-anchored after edits via a line-text snapshot), a Code Browser
-of procedures/TODOs with live filter (Ctrl+Shift+O), and a Ctrl+Tab
-MRU window switcher (hold Ctrl, Tab cycles, release commits) showing
-file icons and an orange dot on git-modified files. Result lists use
-custom-drawn controls with shell file icons throughout.
+of procedures/TODOs with live filter (Ctrl+Shift+O), a Quick Open
+palette (Ctrl+P) that fuzzy-matches every module/file in the project
+group as you type — capital-hump style, so `ms` finds modSubclass and
+`ff` finds frmFindFiles; Enter opens the code window, Shift+Enter the
+designer — and a Ctrl+Tab MRU window switcher (hold Ctrl, Tab cycles,
+release commits) showing file icons and an orange dot on git-modified
+files. Result lists use custom-drawn controls with shell file icons
+throughout.
 
 ### Editing shortcuts
 Duplicate line (Ctrl+D), move lines up/down (Alt+Up/Down), delete
@@ -117,13 +121,14 @@ keyboard cheat sheet.
 
 | Key | Action |
 |---|---|
-| Ctrl+F | Find / replace bar |
+| Ctrl+F | Show / hide find / replace bar |
 | F3 / Shift+F3 | Find next / previous |
 | Ctrl+F3 | Highlight word at cursor everywhere |
 | Esc | Close find bar / cancel switcher |
 | F12 / Shift+F12 | Go to definition / find all references |
 | Ctrl+F2 / F2 | Toggle bookmark / next bookmark |
 | Ctrl+Shift+O | Code browser (procedures / TODOs) |
+| Ctrl+P | Quick Open: fuzzy find file / module |
 | Ctrl+Tab / Ctrl+Shift+Tab | MRU window switcher |
 | Ctrl+D | Duplicate line / selection |
 | Alt+Up / Alt+Down | Move lines up / down |
@@ -135,9 +140,12 @@ keyboard cheat sheet.
 | Ctrl+Shift+/ | Shortcut cheat sheet |
 
 Shortcuts only apply while focus is in a code window, so the IDE's own
-bindings elsewhere are untouched. Two deliberate overrides in code
-windows: F2 (normally Object Browser — still available via the View
-menu) and Ctrl+Tab (normally plain MDI cycling). Shift+F2 (native
+bindings elsewhere are untouched. The one exception is Ctrl+P, which
+works anywhere in the IDE — including the Project Explorer — but never
+inside a program being run. Three deliberate overrides: F2 (normally
+Object Browser — still available via the View menu), Ctrl+Tab
+(normally plain MDI cycling), and Ctrl+P (normally Print — still
+available via the File menu). Shift+F2 (native
 go-to-definition) is left alone as a fallback. Ctrl+/ is bound to the
 physical `/` key of US-style layouts.
 
