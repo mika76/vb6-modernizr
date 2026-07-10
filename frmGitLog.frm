@@ -5,6 +5,7 @@ Begin VB.Form frmGitLog
    ClientLeft      =   60
    ClientTop       =   345
    ClientWidth     =   10200
+   KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
    ScaleHeight     =   6600
    ScaleWidth      =   10200
@@ -556,6 +557,13 @@ End Sub
 Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         Cancel = True
+        Me.Hide
+    End If
+End Sub
+
+Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
+    If KeyCode = vbKeyEscape Then
+        KeyCode = 0
         Me.Hide
     End If
 End Sub

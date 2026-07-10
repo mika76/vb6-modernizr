@@ -115,6 +115,19 @@ caption; on/off commands (tabs, guides, line numbers, auto-backup)
 show a check mark reflecting their state. **Ctrl+Shift+/** opens a
 keyboard cheat sheet.
 
+A dockable **Modernizr toolbar** leads with **Back / Forward**
+navigation, then the everyday commands (Quick Open, find bar, Find in
+Files, Code Browser, git) plus the toggles, which render as pressed
+buttons tracking their state. Clicking a window's button while that
+window is open closes it again. Back/Forward walk the add-in's own
+VS-style navigation history: cursor positions are sampled as you
+work, and switching modules or jumping more than a few lines records
+an entry (session-only; also bound to Alt+Left / Alt+Right). The bar
+is created as temporary — correct add-in hygiene, but it means the
+IDE won't remember where you dock it — so its position and visibility
+are saved to the registry on disconnect and restored on the next
+load.
+
 ![menu](images/menu.png)
 
 ## Keyboard shortcuts
@@ -124,11 +137,12 @@ keyboard cheat sheet.
 | Ctrl+F | Show / hide find / replace bar |
 | F3 / Shift+F3 | Find next / previous |
 | Ctrl+F3 | Highlight word at cursor everywhere |
-| Esc | Close find bar / cancel switcher |
+| Esc | Close any Modernizr window / cancel switcher |
 | F12 / Shift+F12 | Go to definition / find all references |
 | Ctrl+F2 / F2 | Toggle bookmark / next bookmark |
 | Ctrl+Shift+O | Code browser (procedures / TODOs) |
 | Ctrl+P | Quick Open: fuzzy find file / module |
+| Alt+Left / Alt+Right | Back / forward in navigation history |
 | Ctrl+Tab / Ctrl+Shift+Tab | MRU window switcher |
 | Ctrl+D | Duplicate line / selection |
 | Alt+Up / Alt+Down | Move lines up / down |

@@ -12,6 +12,7 @@ Module=modHighlight; modHighlight.bas
 Module=modEditOps; modEditOps.bas
 Module=modMRU; modMRU.bas
 Module=modActions; modActions.bas
+Module=modNav; modNav.bas
 Module=modBookmarks; modBookmarks.bas
 Module=modGit; modGit.bas
 Module=modBackup; modBackup.bas

@@ -19,7 +19,9 @@ Private Const VK_TAB As Long = &H9
 Private Const VK_SHIFT As Long = &H10
 Private Const VK_CONTROL As Long = &H11
 Private Const VK_ESCAPE As Long = &H1B
+Private Const VK_LEFT As Long = &H25
 Private Const VK_UP As Long = &H26
+Private Const VK_RIGHT As Long = &H27
 Private Const VK_DOWN As Long = &H28
 Private Const VK_B As Long = &H42
 Private Const VK_D As Long = &H44
@@ -241,6 +243,12 @@ Private Function HandleSysKeyDown(m As MSGSTRUCT) As Boolean
         HandleSysKeyDown = True
     Case VK_DOWN
         Edit_MoveLinesDown
+        HandleSysKeyDown = True
+    Case VK_LEFT
+        Nav_Back                   ' Alt+Left / Alt+Right = navigation
+        HandleSysKeyDown = True
+    Case VK_RIGHT
+        Nav_Forward
         HandleSysKeyDown = True
     End Select
 End Function

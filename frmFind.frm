@@ -212,6 +212,12 @@ End Sub
 
 Public Sub ShowBar()
     On Error Resume Next
+    ' the toolbar/menu (unlike Ctrl+F) can invoke this with a form
+    ' designer or nothing at all active - only open over a code window
+    Dim w As VBIDE.Window
+    Set w = gVBE.ActiveWindow
+    If w Is Nothing Then Exit Sub
+    If w.Type <> vbext_wt_CodeWindow Then Exit Sub
     EnsureUI
     PrefillFromSelection
     FindBar_Show

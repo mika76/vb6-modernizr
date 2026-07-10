@@ -118,6 +118,7 @@ Private Sub tmrRefresh_Timer()
     BM_Poll
     Git_Poll
     Backup_Poll
+    Nav_Poll
     Highlight_EnsureHooks
     If gLineNumsEnabled Then frmGutter.Poll
 End Sub

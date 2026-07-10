@@ -1,16 +1,17 @@
 VERSION 5.00
-Begin VB.Form frmChanges
+Begin VB.Form frmChanges 
    Caption         =   "Git Changes - Modernizr"
-   ClientHeight    =   7550
+   ClientHeight    =   7545
    ClientLeft      =   60
    ClientTop       =   345
-   ClientWidth     =   8000
+   ClientWidth     =   7995
+   KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
-   ScaleHeight     =   7550
-   ScaleWidth      =   8000
+   ScaleHeight     =   7545
+   ScaleWidth      =   7995
    ShowInTaskbar   =   0   'False
    StartUpPosition =   2  'CenterScreen
-   Begin VB.CommandButton cmdRefresh
+   Begin VB.CommandButton cmdRefresh 
       Caption         =   "&Refresh"
       Height          =   345
       Left            =   6820
@@ -18,16 +19,16 @@ Begin VB.Form frmChanges
       Top             =   135
       Width           =   1000
    End
-   Begin VB6Modernizr.ucList lstUnstaged
+   Begin VB6Modernizr.ucList lstUnstaged 
       Height          =   1815
       Left            =   180
       TabIndex        =   3
       Top             =   870
       Width           =   7640
-      _ExtentX        =   13476
-      _ExtentY        =   3202
+      _ExtentX        =   13467
+      _ExtentY        =   3201
    End
-   Begin VB.CommandButton cmdStage
+   Begin VB.CommandButton cmdStage 
       Caption         =   "Stage &Selected"
       Height          =   345
       Left            =   180
@@ -35,7 +36,7 @@ Begin VB.Form frmChanges
       Top             =   2805
       Width           =   1500
    End
-   Begin VB.CommandButton cmdStageAll
+   Begin VB.CommandButton cmdStageAll 
       Caption         =   "Stage &All"
       Height          =   345
       Left            =   1760
@@ -43,7 +44,7 @@ Begin VB.Form frmChanges
       Top             =   2805
       Width           =   1200
    End
-   Begin VB.CommandButton cmdUnstage
+   Begin VB.CommandButton cmdUnstage 
       Caption         =   "&Unstage Selected"
       Height          =   345
       Left            =   3260
@@ -51,7 +52,7 @@ Begin VB.Form frmChanges
       Top             =   2805
       Width           =   1700
    End
-   Begin VB.CommandButton cmdUnstageAll
+   Begin VB.CommandButton cmdUnstageAll 
       Caption         =   "U&nstage All"
       Height          =   345
       Left            =   5040
@@ -59,16 +60,16 @@ Begin VB.Form frmChanges
       Top             =   2805
       Width           =   1300
    End
-   Begin VB6Modernizr.ucList lstStaged
+   Begin VB6Modernizr.ucList lstStaged 
       Height          =   1815
       Left            =   180
       TabIndex        =   9
       Top             =   3585
       Width           =   7640
-      _ExtentX        =   13476
-      _ExtentY        =   3202
+      _ExtentX        =   13467
+      _ExtentY        =   3201
    End
-   Begin VB.TextBox txtMsg
+   Begin VB.TextBox txtMsg 
       Height          =   630
       Left            =   180
       MultiLine       =   -1  'True
@@ -76,7 +77,7 @@ Begin VB.Form frmChanges
       Top             =   5560
       Width           =   6440
    End
-   Begin VB.CommandButton cmdCommit
+   Begin VB.CommandButton cmdCommit 
       Caption         =   "&Commit"
       Height          =   630
       Left            =   6820
@@ -84,15 +85,14 @@ Begin VB.Form frmChanges
       Top             =   5560
       Width           =   1000
    End
-   Begin VB.Label lblBranch
-      Caption         =   ""
+   Begin VB.Label lblBranch 
       Height          =   255
       Left            =   180
       TabIndex        =   0
       Top             =   180
       Width           =   6600
    End
-   Begin VB.Label lblUnstaged
+   Begin VB.Label lblUnstaged 
       Caption         =   "Unstaged / untracked  (double-click opens the file):"
       Height          =   240
       Left            =   180
@@ -100,7 +100,7 @@ Begin VB.Form frmChanges
       Top             =   600
       Width           =   7640
    End
-   Begin VB.Label lblStaged
+   Begin VB.Label lblStaged 
       Caption         =   "Staged  (will be committed):"
       Height          =   240
       Left            =   180
@@ -108,8 +108,7 @@ Begin VB.Form frmChanges
       Top             =   3315
       Width           =   7640
    End
-   Begin VB.Label lblStatus
-      Caption         =   ""
+   Begin VB.Label lblStatus 
       Height          =   615
       Left            =   180
       TabIndex        =   12
@@ -381,6 +380,13 @@ End Function
 Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         Cancel = True
+        Me.Hide
+    End If
+End Sub
+
+Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
+    If KeyCode = vbKeyEscape Then
+        KeyCode = 0
         Me.Hide
     End If
 End Sub

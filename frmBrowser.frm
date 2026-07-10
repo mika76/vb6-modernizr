@@ -1,23 +1,24 @@
 VERSION 5.00
-Begin VB.Form frmBrowser
+Begin VB.Form frmBrowser 
    Caption         =   "Code Browser - Modernizr"
    ClientHeight    =   5400
    ClientLeft      =   60
    ClientTop       =   345
    ClientWidth     =   7200
+   KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
    ScaleHeight     =   5400
    ScaleWidth      =   7200
    ShowInTaskbar   =   0   'False
    StartUpPosition =   2  'CenterScreen
-   Begin VB.TextBox txtFilter
+   Begin VB.TextBox txtFilter 
       Height          =   315
       Left            =   180
       TabIndex        =   0
       Top             =   150
       Width           =   2800
    End
-   Begin VB.OptionButton optKind
+   Begin VB.OptionButton optKind 
       Caption         =   "&Procedures"
       Height          =   255
       Index           =   0
@@ -27,7 +28,7 @@ Begin VB.Form frmBrowser
       Value           =   -1  'True
       Width           =   1400
    End
-   Begin VB.OptionButton optKind
+   Begin VB.OptionButton optKind 
       Caption         =   "&TODOs"
       Height          =   255
       Index           =   1
@@ -36,7 +37,7 @@ Begin VB.Form frmBrowser
       Top             =   180
       Width           =   1100
    End
-   Begin VB.CommandButton cmdRefresh
+   Begin VB.CommandButton cmdRefresh 
       Caption         =   "&Refresh"
       Height          =   345
       Left            =   6020
@@ -44,7 +45,7 @@ Begin VB.Form frmBrowser
       Top             =   140
       Width           =   1000
    End
-   Begin VB6Modernizr.ucList lstItems
+   Begin VB6Modernizr.ucList lstItems 
       Height          =   4095
       Left            =   180
       TabIndex        =   4
@@ -53,8 +54,7 @@ Begin VB.Form frmBrowser
       _ExtentX        =   12065
       _ExtentY        =   7223
    End
-   Begin VB.Label lblStatus
-      Caption         =   ""
+   Begin VB.Label lblStatus 
       Height          =   255
       Left            =   180
       TabIndex        =   5
@@ -92,6 +92,13 @@ End Sub
 Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         Cancel = True
+        Me.Hide
+    End If
+End Sub
+
+Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
+    If KeyCode = vbKeyEscape Then
+        KeyCode = 0
         Me.Hide
     End If
 End Sub
@@ -219,10 +226,10 @@ Private Sub JumpToSelection()
     If i < 0 Or i >= mCount Then Exit Sub
 
     Dim m As MatchInfo
-    m.Proj = gVBE.ActiveVBProject.Name
-    m.Comp = mComp(i)
+    m.proj = gVBE.ActiveVBProject.Name
+    m.comp = mComp(i)
     m.LineNum = mLine(i)
-    m.Col = 1
+    m.col = 1
     m.MatchLen = 0
     GoToMatch m
 End Sub

@@ -3,8 +3,8 @@
 All five phases of the original roadmap shipped (v1.1): tabs with
 drag-reorder/dirty/git markers, docked find/replace bar with regex +
 highlight-all, find in files, navigation (definition, references,
-bookmarks, code browser, MRU switcher, Ctrl+P fuzzy quick open),
-editing shortcuts, full git
+bookmarks, code browser, MRU switcher, Ctrl+P fuzzy quick open,
+back/forward history), editing shortcuts, full git
 integration (status, staging, commit, log graph, blame, line markers),
 mouse wheel scrolling, indentation guides, and auto-backup.
 

@@ -52,6 +52,9 @@ Option Explicit
 Private Const VIS_ROWS As Long = 14
 Private Const FOOT_H As Long = 18      ' px at 96 dpi, legend footer
 
+Private Declare Function GetTickCount Lib "kernel32" () As Long
+Private mHideTick As Long              ' when the palette last auto-hid
+
 ' snapshot of all components, taken each time the palette opens
 Private mNames() As String
 Private mFiles() As String     ' file name tail, "" if never saved
@@ -81,8 +84,17 @@ End Sub
 
 Private Sub Form_Deactivate()
     On Error Resume Next
+    mHideTick = GetTickCount()
     Me.Hide
 End Sub
+
+' True just after the palette auto-hid because focus went elsewhere.
+' Clicking its toolbar button deactivates (= hides) the palette before
+' the button action runs; this lets that click toggle it closed
+' instead of instantly reopening it.
+Public Property Get JustDismissed() As Boolean
+    JustDismissed = (GetTickCount() - mHideTick) < 500
+End Property
 
 Private Sub Form_Resize()
     On Error Resume Next

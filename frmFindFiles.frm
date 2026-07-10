@@ -5,6 +5,7 @@ Begin VB.Form frmFindFiles
    ClientLeft      =   60
    ClientTop       =   345
    ClientWidth     =   9600
+   KeyPreview      =   -1  'True
    LinkTopic       =   "Form1"
    ScaleHeight     =   6480
    ScaleWidth      =   9600
@@ -182,6 +183,14 @@ Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
     If UnloadMode = vbFormControlMenu Then
         mCancel = True
         Cancel = True
+        Me.Hide
+    End If
+End Sub
+
+Private Sub Form_KeyDown(KeyCode As Integer, Shift As Integer)
+    If KeyCode = vbKeyEscape Then
+        KeyCode = 0
+        mCancel = True           ' stop a running search too
         Me.Hide
     End If
 End Sub
