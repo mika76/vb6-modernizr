@@ -59,6 +59,8 @@ release commits) showing file icons and an orange dot on git-modified
 files. Result lists use custom-drawn controls with shell file icons
 throughout.
 
+![quick open](images/quick-open.png)
+
 ### Editing shortcuts
 Duplicate line (Ctrl+D), move lines up/down (Alt+Up/Down), delete
 lines (Ctrl+Shift+K), comment/uncomment (Ctrl+/). All work on the
@@ -129,6 +131,8 @@ are saved to the registry on disconnect and restored on the next
 load.
 
 ![menu](images/menu.png)
+
+![toolbar](images/toolbar.png)
 
 ## Keyboard shortcuts
 
