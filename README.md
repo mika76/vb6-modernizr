@@ -157,6 +157,11 @@ load.
 | Ctrl+Shift+B | Git blame current line |
 | Ctrl+Shift+/ | Shortcut cheat sheet |
 
+Inside Modernizr's own text boxes the standard editing keys behave
+normally — Ctrl+C / X / V / Z / A, Ctrl+Insert, Shift+Insert,
+Shift+Delete — because the add-in claims them back from the IDE, whose
+accelerator table would otherwise apply them to the code editor.
+
 Shortcuts only apply while focus is in a code window, so the IDE's own
 bindings elsewhere are untouched. The one exception is Ctrl+P, which
 works anywhere in the IDE — including the Project Explorer — but never

@@ -239,6 +239,14 @@ Public Const WM_MOUSEMOVE As Long = &H200
 Public Const WM_LBUTTONUP As Long = &H202
 Public Const WM_TIMER As Long = &H113
 
+' clipboard / selection messages understood by edit controls (VB6
+' TextBox and ComboBox superclass the Win32 EDIT / COMBOBOX classes)
+Public Const WM_CUT As Long = &H300
+Public Const WM_COPY As Long = &H301
+Public Const WM_PASTE As Long = &H302
+Public Const WM_UNDO As Long = &H304
+Public Const EM_SETSEL As Long = &HB1
+
 ' private message (WM_APP range): redraw the scrollbar tick overlay.
 ' Posted during thumb tracking, where the scrollbar's modal loop eats
 ' mouse messages but still dispatches posted ones.

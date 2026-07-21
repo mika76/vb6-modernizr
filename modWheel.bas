@@ -10,6 +10,8 @@ Option Explicit
 '  - Ctrl+Tab / Ctrl+Shift+Tab MRU window switcher (frmSwitcher);
 '    releasing Ctrl commits, Esc cancels.
 '  - Ctrl+P Quick Open fuzzy file/module palette (frmQuickOpen).
+'  - Clipboard keys inside our own text boxes, which the IDE's
+'    accelerators would otherwise aim at the code editor.
 '  - Editing shortcuts (modEditOps): Ctrl+D duplicate, Alt+Up/Down
 '    move lines, Ctrl+Shift+K delete lines, Ctrl+/ comment toggle,
 '    Shift+F12 find all references.
@@ -23,7 +25,11 @@ Private Const VK_LEFT As Long = &H25
 Private Const VK_UP As Long = &H26
 Private Const VK_RIGHT As Long = &H27
 Private Const VK_DOWN As Long = &H28
+Private Const VK_INSERT As Long = &H2D
+Private Const VK_DELETE As Long = &H2E
+Private Const VK_A As Long = &H41
 Private Const VK_B As Long = &H42
+Private Const VK_C As Long = &H43
 Private Const VK_D As Long = &H44
 Private Const VK_F As Long = &H46
 Private Const VK_G As Long = &H47
@@ -31,6 +37,10 @@ Private Const VK_K As Long = &H4B
 Private Const VK_L As Long = &H4C
 Private Const VK_O As Long = &H4F
 Private Const VK_P As Long = &H50
+Private Const VK_V As Long = &H56
+Private Const VK_X As Long = &H58
+Private Const VK_Y As Long = &H59
+Private Const VK_Z As Long = &H5A
 Private Const VK_F2 As Long = &H71
 Private Const VK_F3 As Long = &H72
 Private Const VK_F12 As Long = &H7B
@@ -104,6 +114,13 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
     Dim ctrl As Boolean, shift As Boolean
     ctrl = (GetKeyState(VK_CONTROL) < 0)
     shift = (GetKeyState(VK_SHIFT) < 0)
+
+    ' text-box shortcuts first: the IDE's accelerators would otherwise
+    ' claim them and act on the code editor instead
+    If HandleEditShortcut(m, ctrl, shift) Then
+        HandleKeyDown = True
+        Exit Function
+    End If
 
     Select Case m.wParam
 
@@ -230,6 +247,82 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
         End If
 
     End Select
+End Function
+
+' Ctrl+C / X / V / Z / A (and the Insert/Delete variants) inside one of
+' our own text boxes. The IDE's accelerator table gets these before the
+' control does and routes them at the active code pane - Ctrl+V pasted
+' into the module instead of the Find box (issue #3). So we perform the
+' operation ourselves via the standard edit-control messages and
+' swallow the key before the IDE ever sees it. Ctrl+Y is swallowed
+' without action: the IDE would delete a line of code behind our back,
+' and VB6 text boxes have no redo to offer instead.
+Private Function HandleEditShortcut(m As MSGSTRUCT, ByVal ctrl As Boolean, _
+        ByVal shift As Boolean) As Boolean
+    On Error Resume Next
+    Dim msg As Long, claim As Boolean
+
+    Select Case m.wParam
+    Case VK_V
+        If ctrl And Not shift Then msg = WM_PASTE
+    Case VK_C
+        If ctrl And Not shift Then msg = WM_COPY
+    Case VK_X
+        If ctrl And Not shift Then msg = WM_CUT
+    Case VK_Z
+        If ctrl And Not shift Then msg = WM_UNDO
+    Case VK_A
+        If ctrl And Not shift Then msg = EM_SETSEL
+    Case VK_INSERT
+        If ctrl And Not shift Then msg = WM_COPY
+        If shift And Not ctrl Then msg = WM_PASTE
+    Case VK_DELETE
+        If shift And Not ctrl Then msg = WM_CUT
+    Case VK_Y
+        If ctrl And Not shift Then claim = True
+    Case Else
+        Exit Function
+    End Select
+    If msg = 0 And Not claim Then Exit Function
+
+    Dim H As Long
+    H = GetFocus()
+    If Not IsEditLike(H) Then Exit Function
+    If Not FocusInOurForm(H) Then Exit Function
+
+    If msg = EM_SETSEL Then
+        SendMessageA H, EM_SETSEL, 0, -1
+    ElseIf msg <> 0 Then
+        SendMessageA H, msg, 0, 0
+    End If
+    HandleEditShortcut = True
+End Function
+
+' VB6 text boxes and combos superclass the Win32 EDIT / COMBOBOX
+' classes ("ThunderRT6TextBox", and a combo's inner "Edit"), so they
+' all honour the standard clipboard messages.
+Private Function IsEditLike(ByVal hwnd As Long) As Boolean
+    Dim c As String
+    c = WndClass(hwnd)
+    If Len(c) = 0 Then Exit Function
+    IsEditLike = (InStr(1, c, "Edit", vbTextCompare) > 0) Or _
+                 (InStr(1, c, "TextBox", vbTextCompare) > 0) Or _
+                 (InStr(1, c, "ComboBox", vbTextCompare) > 0)
+End Function
+
+' True when hwnd sits inside one of the add-in's own forms. Walking
+' GetParent covers both shapes we use: docked bars (child windows of
+' the IDE) and dialogs (top-level windows owned by it).
+Private Function FocusInOurForm(ByVal hwnd As Long) As Boolean
+    On Error Resume Next
+    Dim H As Long, f As Form
+    H = hwnd
+    Do While H <> 0
+        For Each f In Forms
+            If f.hwnd = H Then FocusInOurForm = True: Exit Function
+        Next
+        H = GetParent(H)
+    Loop
 End Function
 
 ' Alt combos arrive as WM_SYSKEYDOWN (context bit 29 of lParam set)
