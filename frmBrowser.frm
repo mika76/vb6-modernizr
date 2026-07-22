@@ -85,6 +85,7 @@ Public Sub ShowBrowser()
     Load Me
     SetWindowLongA Me.hwnd, GWL_HWNDPARENT, MainHwnd()
     RebuildList
+    CancelMenuMode                     ' or typing feeds menu mnemonics
     Me.Show vbModeless
     txtFilter.SetFocus
 End Sub

@@ -78,8 +78,11 @@ Public Sub ShowQuickOpen()
     Else
         RebuildList
     End If
+    CancelMenuMode                     ' or typing feeds menu mnemonics
     Me.Show vbModeless
     txtFilter.SetFocus
+    ' VB's SetFocus can silently lose against IDE focus games; make sure
+    If GetFocus() <> txtFilter.hwnd Then SetFocusAPI txtFilter.hwnd
 End Sub
 
 Private Sub Form_Deactivate()

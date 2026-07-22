@@ -298,6 +298,12 @@ Private Const KEY_READ As Long = &H20019
 Public Const CLS_CODEPANE As String = "VbaWindow"
 Public Const CLS_MDICLIENT As String = "MDIClient"
 
+' Office command bar windows (the IDE menu bar / toolbars)
+Public Const CLS_COMMANDBAR As String = "MsoCommandBar"
+Public Const CLS_COMMANDBARDOCK As String = "MsoCommandBarDock"
+
+Private Const VK_ESCAPE As Long = &H1B
+
 ' =====================================================================
 '  Helpers
 ' =====================================================================
@@ -323,6 +329,45 @@ End Function
 
 Public Function MDIClientHwnd() As Long
     MDIClientHwnd = FindWindowEx(MainHwnd(), 0, CLS_MDICLIENT, vbNullString)
+End Function
+
+' Kick the IDE out of keyboard menu mode. After Esc closes a dropped-
+' down menu, or a tap of Alt highlights the menu bar, the bar stays
+' armed and eats the next plain letters as mnemonics - "f" would drop
+' the File menu instead of landing in a popup's text box (issue #4).
+'
+' The IDE menu is an Office command bar ("MsoCommandBar" window), not
+' a native Win32 menu, so WM_CANCELMODE on the main frame does not
+' reach it. Instead feed the bar itself the Esc keypress that disarms
+' it, aimed at the armed bar in the focus chain (keyboard mode parks
+' focus on the bar) or at the docked Menu Bar as a fallback. An Esc
+' sent to a bar that is not armed is ignored, so this is safe to call
+' unconditionally before giving focus to one of our popups.
+Public Sub CancelMenuMode()
+    On Error Resume Next
+    Dim H As Long
+    H = GetFocus()
+    Do While H <> 0
+        If StrComp(WndClass(H), CLS_COMMANDBAR, vbTextCompare) = 0 Then Exit Do
+        H = GetParent(H)
+    Loop
+    If H = 0 Then H = MenuBarHwnd()
+    If H = 0 Then Exit Sub
+    SendMessageA H, WM_KEYDOWN, VK_ESCAPE, &H10001
+    SendMessageA H, WM_KEYUP, VK_ESCAPE, &HC0010001
+End Sub
+
+' hwnd of the IDE's "Menu Bar" command bar; 0 if not found. Command
+' bars live inside "MsoCommandBarDock" strips along the frame edges.
+Private Function MenuBarHwnd() As Long
+    On Error Resume Next
+    Dim hDock As Long, H As Long
+    hDock = FindWindowEx(MainHwnd(), 0, CLS_COMMANDBARDOCK, vbNullString)
+    Do While hDock <> 0
+        H = FindWindowEx(hDock, 0, CLS_COMMANDBAR, "Menu Bar")
+        If H <> 0 Then MenuBarHwnd = H: Exit Function
+        hDock = FindWindowEx(MainHwnd(), hDock, CLS_COMMANDBARDOCK, vbNullString)
+    Loop
 End Function
 
 ' Depth-first search for a descendant window of a given class.

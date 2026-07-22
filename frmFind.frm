@@ -221,6 +221,7 @@ Public Sub ShowBar()
     EnsureUI
     PrefillFromSelection
     FindBar_Show
+    CancelMenuMode                     ' or typing feeds menu mnemonics
     SetFocusAPI cboFind.hwnd
 End Sub
 

@@ -175,6 +175,7 @@ Public Sub ShowDialog()
     Load Me
     ' owned by the IDE main window, so it stays above it
     SetWindowLongA Me.hwnd, GWL_HWNDPARENT, MainHwnd()
+    CancelMenuMode                     ' or typing feeds menu mnemonics
     Me.Show vbModeless
     txtFind.SetFocus
 End Sub
