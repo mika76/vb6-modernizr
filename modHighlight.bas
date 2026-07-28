@@ -427,8 +427,10 @@ Private Sub PaintLineNumbers(ByVal hdc As Long, cp As VBIDE.CodePane, _
             x = xRight - sz.cx
             If x < 1 Then x = 1
             ' + 3: text rows start a hair below the computed offset,
-            ' same empirical shift the match boxes use
-            y = yTop + i * lineH + ScaleForDpi(3) + (lineH - sz.cy) \ 2
+            ' same empirical shift the match boxes use. The centering
+            ' term rounds to nearest (+1 before the halve) - plain \ 2
+            ' truncates, parking the number half a pixel high.
+            y = yTop + i * lineH + ScaleForDpi(3) + (lineH - sz.cy + 1) \ 2
             TextOutA hdc, x, y, s, Len(s)
         End If
     Next

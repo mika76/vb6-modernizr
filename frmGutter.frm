@@ -1,10 +1,8 @@
 VERSION 5.00
-Begin VB.Form frmGutter
+Begin VB.Form frmGutter 
    Appearance      =   0  'Flat
    AutoRedraw      =   -1  'True
-   BackColor       =   &H8000000F&
    BorderStyle     =   0  'None
-   Caption         =   ""
    ClientHeight    =   3000
    ClientLeft      =   0
    ClientTop       =   0
@@ -142,7 +140,9 @@ Private Sub DrawNumbers(cp As VBIDE.CodePane, ByVal hPane As Long)
             If y >= 0 Then
                 s = CStr(ln)
                 Me.CurrentX = xRight - Me.TextWidth(s)
-                Me.CurrentY = y + (lineH - Me.TextHeight(s)) \ 2
+                ' round to nearest: plain \ 2 truncates and parks the
+                ' number half a pixel high
+                Me.CurrentY = y + (lineH - Me.TextHeight(s) + 1) \ 2
                 Me.Print s
             End If
         End If
@@ -154,8 +154,8 @@ End Sub
 
 Private Sub DrawEdge()
     On Error Resume Next
-    Me.Line (Me.ScaleWidth - 1, 0)-(Me.ScaleWidth - 1, Me.ScaleHeight), _
-        vb3DShadow
+    'Me.Line (Me.ScaleWidth - 1, 0)-(Me.ScaleWidth - 1, Me.ScaleHeight), _
+        'vb3DShadow
 End Sub
 
 ' Top of the pane's client area relative to the gutter's client area.
