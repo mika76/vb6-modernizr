@@ -646,18 +646,9 @@ Private Function ReadAll(ByVal path As String) As String
     Close #ff
 End Function
 
+' Same reader the file scan uses, so the file-line -> module-line
+' offsets stay in step with the line numbers Find in Files reports.
 Public Function CountFileLines(ByVal path As String) As Long
-    On Error GoTo Fail
-    Dim ff As Integer, s As String, n As Long
-    ff = FreeFile
-    Open path For Input As #ff
-    Do While Not EOF(ff)
-        Line Input #ff, s
-        n = n + 1
-    Loop
-    Close #ff
-    CountFileLines = n
-    Exit Function
-Fail:
-    Close #ff
+    Dim src() As String
+    If ReadFileLines(path, src) Then CountFileLines = UBound(src) + 1
 End Function

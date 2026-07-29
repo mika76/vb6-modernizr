@@ -51,7 +51,7 @@ Begin VB.Form frmFindFiles
       Width           =   4600
    End
    Begin VB.OptionButton optRoot
-      Caption         =   "Active &project folder"
+      Caption         =   "Active &project folders"
       Height          =   255
       Index           =   0
       Left            =   180
@@ -136,9 +136,12 @@ Option Explicit
 
 ' =====================================================================
 '  Find in Files: scans source files on disk (code AND designer text)
-'  under the project folder or any folder. Double-click a result to
-'  jump to it; files that belong to the open project group open in the
-'  IDE at the right line, anything else opens in Notepad.
+'  under the project folders or any folder. A .vbp routinely links
+'  files in from sibling folders, so the project scan walks the .vbp's
+'  own folder plus every folder that actually holds one of its
+'  components - not just the tree below the .vbp. Double-click a
+'  result to jump to it; files that belong to the open project group
+'  open in the IDE at the right line, anything else opens in Notepad.
 ' =====================================================================
 
 ' --- folder browse dialog ---
@@ -226,12 +229,13 @@ Private Sub cmdSearch_Click()
         Exit Sub
     End If
 
-    Dim root As String
-    root = SearchRoot()
-    If Len(root) = 0 Then
+    Dim roots As New Collection, dispRoot As String
+    CollectRoots roots
+    If roots.Count = 0 Then
         lblStatus.Caption = "Save the project first, or pick a folder."
         Exit Sub
     End If
+    dispRoot = CStr(roots(1))     ' results are shown relative to this one
     If Len(txtFind.Text) = 0 Then
         lblStatus.Caption = "Enter search text."
         Exit Sub
@@ -254,53 +258,105 @@ Private Sub cmdSearch_Click()
     mCancel = False
     cmdSearch.Caption = "S&top"
 
-    Dim files As New Collection
-    CollectFiles root, LCase$(txtPatterns.Text), files
+    Dim files As New Collection, seen As New Collection
+    Dim r As Long
+    For r = 1 To roots.Count
+        If mCancel Then Exit For
+        CollectFiles CStr(roots(r)), LCase$(txtPatterns.Text), files, seen
+    Next
 
-    Dim i As Long, hitFiles As Long, lastFile As String
+    Dim i As Long, hitFiles As Long
     For i = 1 To files.Count
         If mCancel Then Exit For
         lblStatus.Caption = "Scanning " & i & "/" & files.Count & _
-                            ": " & MidPath(CStr(files(i)), root)
-        If SearchFile(CStr(files(i)), root) Then hitFiles = hitFiles + 1
+                            ": " & MidPath(CStr(files(i)), dispRoot)
+        If SearchFile(CStr(files(i)), dispRoot) Then hitFiles = hitFiles + 1
         DoEvents
     Next
 
     cmdSearch.Caption = "&Search"
     mSearching = False
     lblStatus.Caption = mResCount & " match(es) in " & hitFiles & _
-                        " file(s), " & files.Count & " file(s) scanned" & _
+                        " file(s); " & files.Count & " file(s) in " & _
+                        roots.Count & " folder(s) scanned" & _
                         IIf(mCancel, " (stopped)", "") & "."
 End Sub
 
-Private Function SearchRoot() As String
+' Folders to walk. A .vbp only names the folder it sits in; components
+' are routinely linked in from sibling folders, and those used to be
+' invisible to the scan. So every folder that actually holds one of the
+' project's files is a root as well.
+Private Sub CollectRoots(roots As Collection)
     On Error Resume Next
+
     If optRoot(1).Value Then
-        If Len(Dir$(txtFolder.Text, vbDirectory)) > 0 Then _
-            SearchRoot = txtFolder.Text
-    Else
-        Dim f As String
-        f = gVBE.ActiveVBProject.FileName
-        If Len(f) > 0 Then SearchRoot = Left$(f, InStrRev(f, "\") - 1)
+        AddRoot roots, TrimSlash(Trim$(txtFolder.Text))
+        Exit Sub
     End If
-    If Right$(SearchRoot, 1) = "\" Then _
-        SearchRoot = Left$(SearchRoot, Len(SearchRoot) - 1)
+
+    If gVBE.ActiveVBProject Is Nothing Then Exit Sub
+    AddRoot roots, FolderOf(gVBE.ActiveVBProject.FileName)
+
+    Dim comp As VBIDE.VBComponent, j As Long
+    For Each comp In gVBE.ActiveVBProject.VBComponents
+        For j = 1 To comp.FileCount
+            AddRoot roots, FolderOf(comp.FileNames(j))
+        Next
+    Next
+End Sub
+
+' Add a folder unless it is already covered - the same folder, or one
+' nested under a root we are going to walk anyway.
+Private Sub AddRoot(roots As Collection, ByVal path As String)
+    On Error Resume Next
+    If Len(path) = 0 Then Exit Sub
+    If Len(Dir$(path, vbDirectory)) = 0 Then Exit Sub
+
+    Dim i As Long, r As String
+    For i = 1 To roots.Count
+        r = CStr(roots(i))
+        If StrComp(path, r, vbTextCompare) = 0 Then Exit Sub
+        If Len(path) > Len(r) Then
+            If StrComp(Left$(path, Len(r) + 1), r & "\", vbTextCompare) = 0 _
+                Then Exit Sub
+        End If
+    Next
+    roots.Add path
+End Sub
+
+Private Function FolderOf(ByVal path As String) As String
+    Dim p As Long
+    p = InStrRev(path, "\")
+    If p > 1 Then FolderOf = Left$(path, p - 1)
+End Function
+
+Private Function TrimSlash(ByVal path As String) As String
+    TrimSlash = path
+    If Len(TrimSlash) > 1 Then
+        If Right$(TrimSlash, 1) = "\" Then _
+            TrimSlash = Left$(TrimSlash, Len(TrimSlash) - 1)
+    End If
 End Function
 
 ' Recursive file collection. Dir$() is not reentrant, so each
-' directory pass finishes before recursing.
+' directory pass finishes before recursing. seen() keeps a file from
+' being scanned twice when roots overlap.
 Private Sub CollectFiles(ByVal path As String, ByVal patterns As String, _
-        files As Collection)
+        files As Collection, seen As Collection)
     On Error Resume Next
-    Dim f As String, subdirs As New Collection
+    Dim f As String, subdirs As New Collection, full As String
 
     f = Dir$(path & "\*", vbDirectory Or vbHidden Or vbSystem)
     Do While Len(f) > 0
         If f <> "." And f <> ".." Then
-            If (GetAttr(path & "\" & f) And vbDirectory) <> 0 Then
-                subdirs.Add path & "\" & f
+            full = path & "\" & f
+            If (GetAttr(full) And vbDirectory) <> 0 Then
+                subdirs.Add full
             ElseIf MatchesPattern(LCase$(f), patterns) Then
-                files.Add path & "\" & f
+                Err.Clear
+                seen.Add True, LCase$(full)      ' duplicate key -> already had it
+                If Err.Number = 0 Then files.Add full
+                Err.Clear
             End If
         End If
         f = Dir$()
@@ -309,7 +365,7 @@ Private Sub CollectFiles(ByVal path As String, ByVal patterns As String, _
     Dim i As Long
     For i = 1 To subdirs.Count
         If mCancel Then Exit Sub
-        CollectFiles CStr(subdirs(i)), patterns, files
+        CollectFiles CStr(subdirs(i)), patterns, files, seen
     Next
 End Sub
 
@@ -327,28 +383,26 @@ Private Function MatchesPattern(ByVal fileName As String, _
     Next
 End Function
 
+' On Error Resume Next, not GoTo: a bad line must not abandon the rest
+' of the file the way the old sequential reader did.
 Private Function SearchFile(ByVal path As String, ByVal root As String) As Boolean
-    On Error GoTo Fail
-    Dim ff As Integer, s As String, lineNo As Long
+    On Error Resume Next
+    Dim src() As String, i As Long, lineNo As Long, s As String
     Dim cols() As Long, lens() As Long
     Dim rel As String
+
+    If Not ReadFileLines(path, src) Then Exit Function
     rel = MidPath(path, root)
 
-    ff = FreeFile
-    Open path For Input As #ff
-    Do While Not EOF(ff)
-        Line Input #ff, s
-        lineNo = lineNo + 1
+    For i = 0 To UBound(src)
+        s = src(i)
+        lineNo = i + 1
         If FindInLine(s, txtFind.Text, cols, lens) > 0 Then
             AddResult path, lineNo, rel & "(" & lineNo & "): " & _
                       Left$(Trim$(s), 250)
             SearchFile = True
         End If
-    Loop
-    Close #ff
-    Exit Function
-Fail:
-    Close #ff
+    Next
 End Function
 
 Private Sub AddResult(ByVal path As String, ByVal lineNo As Long, _
@@ -436,22 +490,6 @@ Private Function FindComponentByFile(ByVal path As String) As VBIDE.VBComponent
             Next
         Next
     Next
-End Function
-
-Private Function CountFileLines(ByVal path As String) As Long
-    On Error GoTo Fail
-    Dim ff As Integer, s As String, n As Long
-    ff = FreeFile
-    Open path For Input As #ff
-    Do While Not EOF(ff)
-        Line Input #ff, s
-        n = n + 1
-    Loop
-    Close #ff
-    CountFileLines = n
-    Exit Function
-Fail:
-    Close #ff
 End Function
 
 ' ---------------------------------------------------------------------

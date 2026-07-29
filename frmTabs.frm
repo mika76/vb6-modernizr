@@ -137,7 +137,7 @@ Private Sub RefreshTabs(ByVal force As Boolean)
 
     For Each w In gVBE.Windows
         If w.Visible Then
-            If w.Type = vbext_wt_CodeWindow Or w.Type = vbext_wt_Designer Then
+            If TabbableWindow(w) Then
                 raw.Add w
                 Err.Clear
                 byKey.Add w, WinKey(w)
@@ -177,7 +177,7 @@ Private Sub RefreshTabs(ByVal force As Boolean)
     Dim aw As VBIDE.Window, actCap As String
     Set aw = gVBE.ActiveWindow
     If Not aw Is Nothing Then
-        If aw.Type = vbext_wt_CodeWindow Or aw.Type = vbext_wt_Designer Then
+        If TabbableWindow(aw) Then
             actCap = WinKey(aw)
             ' keep MDI children maximized while the tab bar is on
             If gTabBarVisible And aw.WindowState <> vbext_ws_Maximize Then
@@ -330,6 +330,18 @@ Private Function TabCaption(ByVal w As VBIDE.Window) As String
     TabCaption = NormalizeCaption(w.Caption)
 End Function
 
+' Component windows get their file's shell icon. The Object Browser has
+' no component, and the caption lookup would quietly hand back the .bas
+' fallback, so ask for a type-library icon instead.
+Private Function TabIcon(ByVal w As VBIDE.Window) As Long
+    On Error Resume Next
+    If w.Type = vbext_wt_Browser Then
+        TabIcon = IconForFile("x.olb")
+    Else
+        TabIcon = IconForCaption(TabCaption(w))
+    End If
+End Function
+
 Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     On Error Resume Next
     Dim l As Long, r As Long, H As Long, w As VBIDE.Window
@@ -352,8 +364,7 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     ' shell file icon for the component behind this window
     Dim gy As Long
     gy = H \ 2
-    DrawIcon16 Me.hdc, l + ScaleForDpi(5), gy - ScaleForDpi(8), _
-        IconForCaption(TabCaption(w))
+    DrawIcon16 Me.hdc, l + ScaleForDpi(5), gy - ScaleForDpi(8), TabIcon(w)
 
     ' orange badge on the icon corner = file modified vs git HEAD
     Dim nm As String, pp As Long
@@ -490,7 +501,7 @@ End Function
 
 Private Sub ActivateTab(ByVal idx As Long)
     On Error Resume Next
-    mWins(idx).SetFocus
+    ActivateIDEWindow mWins(idx)
     If mWins(idx).WindowState <> vbext_ws_Maximize Then
         mWins(idx).WindowState = vbext_ws_Maximize
     End If

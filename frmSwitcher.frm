@@ -124,7 +124,7 @@ Private Sub BuildList()
     Dim keys As New Collection, caps As New Collection
     For Each w In gVBE.Windows
         If w.Visible Then
-            If w.Type = vbext_wt_CodeWindow Or w.Type = vbext_wt_Designer Then
+            If TabbableWindow(w) Then
                 k = NormalizeCaption(w.Caption) & "|" & w.Type
                 Err.Clear
                 keys.Add k, k
@@ -309,7 +309,7 @@ Private Sub ActivateByKey(ByVal k As String)
     Dim w As VBIDE.Window
     For Each w In gVBE.Windows
         If NormalizeCaption(w.Caption) & "|" & w.Type = k Then
-            w.SetFocus
+            ActivateIDEWindow w
             If gTabBarVisible And w.WindowState <> vbext_ws_Maximize Then
                 w.WindowState = vbext_ws_Maximize
             End If

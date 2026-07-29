@@ -251,6 +251,8 @@ Public Const EM_SETSEL As Long = &HB1
 ' Posted during thumb tracking, where the scrollbar's modal loop eats
 ' mouse messages but still dispatches posted ones.
 Public Const WM_APP_SBTICKS As Long = &H8055&
+Public Const WM_MDIACTIVATE As Long = &H222
+Public Const WM_MDIGETACTIVE As Long = &H229
 Public Const WM_WINDOWPOSCHANGING As Long = &H46
 Public Const WM_WINDOWPOSCHANGED As Long = &H47
 
@@ -397,6 +399,45 @@ Public Function NormalizeCaption(ByVal s As String) As String
     If p > 0 Then s = Mid$(s, p + 3)
     NormalizeCaption = s
 End Function
+
+' Windows that earn a tab (and a slot in the Ctrl+Tab switcher): the
+' MDI children the user actually works in. The Object Browser shares
+' the same MDI area as code and designer windows, so it belongs in the
+' list too - it just has no VBComponent behind it, which every caller
+' already tolerates.
+Public Function TabbableWindow(ByVal w As VBIDE.Window) As Boolean
+    On Error Resume Next
+    Select Case w.Type
+    Case vbext_wt_CodeWindow, vbext_wt_Designer, vbext_wt_Browser
+        TabbableWindow = True
+    End Select
+End Function
+
+' Bring an IDE window to the front. VBIDE.Window.SetFocus is the normal
+' route and works for code and designer windows, which return here at
+' the first check. For the Object Browser it sets VBIDE's idea of the
+' active window without performing an MDI activation - the window keeps
+' its place in the z-order and stays hidden behind whatever is
+' maximized, while the tab bar dutifully draws it as active. So the test
+' is not "does VBE think this is active" but "does the MDI client have
+' it on top", which is the thing that actually decides what you see.
+Public Sub ActivateIDEWindow(ByVal w As VBIDE.Window)
+    On Error Resume Next
+    Dim hMDI As Long, hChild As Long
+
+    w.SetFocus
+
+    hMDI = MDIClientHwnd()
+    If hMDI = 0 Then Exit Sub
+    hChild = FindMDIChildByCaption(NormalizeCaption(w.Caption))
+    If hChild = 0 Then Exit Sub
+    If SendMessageA(hMDI, WM_MDIGETACTIVE, 0, 0) = hChild Then Exit Sub
+
+    ' real MDI activation: restores whatever was maximized and raises
+    ' this child in its place
+    SendMessageA hMDI, WM_MDIACTIVATE, hChild, 0
+    SetFocusAPI hChild
+End Sub
 
 ' Find the MDI child whose title matches the given caption.
 Public Function FindMDIChildByCaption(ByVal sCaption As String) As Long

@@ -339,6 +339,42 @@ Private Function ReplaceInLineRange(ByVal sLine As String, ByVal sFind As String
     ReplaceInLineRange = s
 End Function
 
+' ---------------------------------------------------------------------
+'  Reading source off disk
+' ---------------------------------------------------------------------
+
+' Read a file and split it into lines. Sequential "For Input" is not
+' safe for this: Line Input only breaks on CR/CRLF, so an LF-only file
+' collapses into a single line, and a stray Chr$(26) anywhere in the
+' file is taken as end-of-file - both silently drop every match past
+' that point. Binary + an explicit split has neither problem, and the
+' line count it yields matches what the scan numbered.
+' Returns False for a missing, empty or unreadable file.
+Public Function ReadFileLines(ByVal path As String, _
+        outLines() As String) As Boolean
+    On Error GoTo Fail
+    Dim ff As Integer, s As String
+
+    ff = FreeFile
+    Open path For Binary Access Read Shared As #ff
+    If LOF(ff) > 0 Then
+        s = Space$(LOF(ff))
+        Get #ff, 1, s
+    End If
+    Close #ff
+    If Len(s) = 0 Then Exit Function
+
+    s = Replace$(s, vbCrLf, vbLf)
+    s = Replace$(s, vbCr, vbLf)
+    ' the terminator on the final line must not add a phantom line
+    If Right$(s, 1) = vbLf Then s = Left$(s, Len(s) - 1)
+    outLines = Split(s, vbLf)
+    ReadFileLines = True
+    Exit Function
+Fail:
+    Close #ff
+End Function
+
 Public Function FindModule(ByVal projName As String, _
         ByVal compName As String) As VBIDE.CodeModule
     On Error Resume Next
