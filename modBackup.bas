@@ -54,6 +54,7 @@ Public Sub Backup_Poll()
     If mTicks < TICKS_PER_CHECK Then Exit Sub
     mTicks = 0
     If Not mEnabled Then Exit Sub
+    If Not Mode_IsDesign() Then Exit Sub
     If DateDiff("n", mLastBackup, Now) < INTERVAL_MIN Then Exit Sub
     If Not ChangedSince(mLastBackup) Then Exit Sub
     Backup_Now False
@@ -61,6 +62,12 @@ End Sub
 
 Public Sub Backup_Now(ByVal interactive As Boolean)
     On Error Resume Next
+    ' enumerates VBComponents and spawns a zip job - neither belongs
+    ' in the middle of a run
+    If Not Mode_IsDesign() Then
+        If interactive Then Mode_Busy "Backup Now"
+        Exit Sub
+    End If
     Dim projDir As String
     projDir = ActiveProjDir()
     If Len(projDir) = 0 Then

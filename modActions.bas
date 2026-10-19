@@ -53,6 +53,16 @@ End Sub
 
 Public Sub DoAction(ByVal act As String)
     On Error Resume Next
+
+    ' Everything but these two reads or edits the project through the
+    ' object model, which has to wait until the IDE is back in design
+    ' mode (modRunMode).
+    Select Case act
+    Case "about", "keys"
+    Case Else
+        If Mode_Busy("That command") Then Exit Sub
+    End Select
+
     Select Case act
 
     ' window commands toggle: a second click (menu or toolbar) while

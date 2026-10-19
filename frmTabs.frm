@@ -114,6 +114,12 @@ End Sub
 Private Sub tmrRefresh_Timer()
     On Error Resume Next
     If gVBE Is Nothing Then Exit Sub
+    ' While the IDE runs or debugs a project, project code owns this
+    ' thread and this timer fires inside its message loop. Every poll
+    ' below walks the object model or shells out, so none of it can
+    ' happen until the program stops.
+    Mode_Poll
+    If Not Mode_IsDesign() Then Exit Sub
     If gTabBarVisible Then RefreshTabs False
     BM_Poll
     Git_Poll

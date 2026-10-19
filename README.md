@@ -226,6 +226,36 @@ load LF-normalized files.
   disconnect, but when hacking on those parts, test from a second VB6
   instance (F5) so a crash can't take your editor down.
 
+## Running a program while the add-in is loaded
+
+The IDE runs a project **in process, on the IDE's own thread**, so the
+add-in's WH_GETMESSAGE hook and its 400 ms poll timer would otherwise
+see the program being debugged: its keystrokes would be claimed by the
+add-in's shortcuts, its message loop would pump the add-in's timer, and
+every poll behind that timer (tab bar, gutter, bookmarks, git,
+auto-backup) would re-enter the IDE while it is executing project code.
+
+`modRunMode` gates all of it: nothing automatic runs unless the IDE is
+in design mode, and menu commands other than About and the shortcut
+sheet say so and decline. While a program runs the editor overlays stop
+repainting, and they come back when it stops.
+
+The state is read from the IDE's title bar, which always carries it in
+the first brackets - `[design]`, `[run]`, `[break]`. `VBProject.Mode`
+looks like the proper answer and is not: VB6 leaves it at
+`vbext_vm_Run` for a project sitting in the designer, so gating on it
+switched the whole add-in off. Reading the title is also a plain
+`GetWindowText`, with no COM call from inside a message hook. The word
+is localized, so it is not compared against "design" - the add-in
+connects at IDE startup, which is design mode by definition, so
+whatever word is in the title then is the design word.
+
+Programs that install their own message hooks are what showed this up.
+If such a program also misbehaves on its own, check that its hooks are
+disabled in the IDE - the usual guard is
+`hook.HookEnabled = (App.LogMode <> 0)`, since `App.LogMode` is 0 only
+when interpreted.
+
 ## Known limitations
 
 - Highlight/guide geometry is calibrated empirically (registry font +

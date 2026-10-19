@@ -64,7 +64,13 @@ End Sub
 Private Function WheelGetMsgProc(ByVal nCode As Long, ByVal wParam As Long, _
         ByVal lParam As Long) As Long
     On Error Resume Next
-    If nCode = HC_ACTION And wParam = PM_REMOVE Then
+    ' The IDE runs a project in process on this very thread, so
+    ' without the Mode_IsDesign gate every message of the program
+    ' being debugged comes through here: the keys below would be
+    ' taken away from it, and a program with its own WH_GETMESSAGE
+    ' hook would share the chain with handlers that call back into
+    ' the IDE object model (see modRunMode).
+    If nCode = HC_ACTION And wParam = PM_REMOVE And Mode_IsDesign() Then
         Dim m As MSGSTRUCT, swallow As Boolean
         CopyMemory m, ByVal lParam, Len(m)
 

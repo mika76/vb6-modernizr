@@ -19,6 +19,10 @@ $RECYCLE.BIN/
 # Compiled Binaries & Build Outputs
 *.exe
 *.dll
+# ...except the binary-compatibility reference: the add-in's CLSIDs
+# live in it, and a build without it mints new ones and orphans the
+# registration in every IDE that has the add-in installed.
+!compat/*.dll
 *.ocx
 *.cab
 

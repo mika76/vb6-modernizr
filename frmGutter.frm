@@ -64,6 +64,8 @@ End Sub
 Public Sub Poll()
     On Error Resume Next
     If Not Me.Visible Then Exit Sub
+    ' walks the object model - see modRunMode
+    If Not Mode_IsDesign() Then Exit Sub
 
     Dim cp As VBIDE.CodePane, hPane As Long, sig As String
     Set cp = gVBE.ActiveCodePane

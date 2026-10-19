@@ -75,6 +75,7 @@ Private Sub InitAddin()
     If mConnected Then Exit Sub
     mConnected = True
 
+    Mode_Init
     AddMenus
     AddToolbar
     Wheel_Init
