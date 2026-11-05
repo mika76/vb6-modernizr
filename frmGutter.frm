@@ -64,11 +64,8 @@ End Sub
 Public Sub Poll()
     On Error Resume Next
     If Not Me.Visible Then Exit Sub
-    ' Walks the object model, so it waits for the IDE to own its own
-    ' thread again - but a breakpoint counts: stepping through code
-    ' scrolls the pane, and numbers left behind from before the step
-    ' would be worse than none (see modRunMode).
-    If Not Mode_IsIdle() Then Exit Sub
+    ' walks the object model - see modRunMode
+    If Not Mode_IsDesign() Then Exit Sub
 
     Dim cp As VBIDE.CodePane, hPane As Long, sig As String
     Set cp = gVBE.ActiveCodePane

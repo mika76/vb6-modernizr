@@ -130,14 +130,15 @@ End Sub
 Private Sub tmrRefresh_Timer()
     On Error Resume Next
     If gVBE Is Nothing Then Exit Sub
-    ' While the IDE is RUNNING a project, project code owns this thread
-    ' and this timer fires inside its message loop. Every poll below
-    ' walks the object model or shells out, so none of it can happen
-    ' until the program stops - or stops at a breakpoint, which hands
-    ' the thread back to the IDE and is when this is wanted most (see
-    ' modRunMode).
+    ' While the IDE runs or debugs a project, project code owns this
+    ' thread and this timer fires inside its message loop. Every poll
+    ' below walks the object model or shells out, so none of it can
+    ' happen until the program stops. Painting does not depend on this
+    ' - the tabs are drawn from the cache BuildInfo fills, so they keep
+    ' their captions and icons throughout (see modRunMode for why a
+    ' breakpoint does not count as stopped).
     Mode_Poll
-    If Not Mode_IsIdle() Then Exit Sub
+    If Not Mode_IsDesign() Then Exit Sub
     If gTabBarVisible Then RefreshTabs False
     BM_Poll
     Git_Poll

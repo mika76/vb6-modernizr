@@ -256,52 +256,66 @@ load LF-normalized files.
 ## Running or debugging a program while the add-in is loaded
 
 The IDE runs a project **in process, on the IDE's own thread**, so the
-add-in's WH_GETMESSAGE hook and its 400 ms poll timer see the program
-being debugged: its message loop pumps the add-in's timer, and every
-poll behind that timer (tab bar, gutter, bookmarks, git, auto-backup)
-would re-enter the IDE while it is executing project code.
+add-in's 400 ms poll timer keeps firing inside the running program's
+message loop, and every poll behind it (tab bar, gutter, bookmarks,
+git, auto-backup) either walks the VBE object model or shells out.
+Re-entering the IDE while it is busy with project code is what breaks
+it, so nothing automatic runs unless the IDE is in design mode, and
+menu commands other than About and the shortcut sheet say so and
+decline.
 
-`modRunMode` tells three states apart, because "not design mode" covers
-two very different situations:
+Two things are deliberately **not** gated on the mode:
 
-- **`[run]`** — project code owns the thread. Nothing automatic runs,
-  and menu commands other than About and the shortcut sheet say so and
-  decline.
-- **`[break]`** — a breakpoint or Step Into has suspended the project
-  and the IDE is pumping its own message loop again. The object model
-  answers there, so the add-in stays fully awake: tabs, line numbers,
-  highlighting and git keep working while you step through code, which
-  is when they are wanted most.
-- **`[design]`** — everything on, as always.
+- **Keyboard shortcuts.** Every one of them already requires focus to
+  be in an IDE code pane, in one of the add-in's own text boxes, or
+  over a window the add-in subclassed, and a running program's windows
+  are unowned top-level windows that are none of those — that is what
+  keeps the add-in's hands off the program. Gating the hook on the mode
+  as well only took Ctrl+F, Ctrl+D and the rest away from the IDE's own
+  editor for as long as a program was loaded.
+- **Drawing the tab bar.** Captions, icons, the dirty marker and git
+  status are captured into a cache when the tabs refresh, and the paint
+  path reads nothing else. `Redraw` also runs from `Form_Resize`, which
+  the IDE triggers while a program is running; when it asked the object
+  model as it drew, those calls came back empty and `AutoRedraw` baked a
+  bar of blank, icon-less tabs into the form's bitmap — which nothing
+  repainted afterwards, because the change signature still matched.
 
-Keyboard shortcuts are not gated on the mode at all. Every one of them
-already requires focus to be in an IDE code pane, in one of the add-in's
-own text boxes, or over a window the add-in subclassed, and a running
-program's windows are unowned top-level windows that are none of those.
-Gating the hook on design mode as well only took Ctrl+F, Ctrl+D and the
-rest away from the IDE's own editor for as long as a program was loaded.
+### Break mode is not treated as design mode
 
-Detection needs two sources, because neither answers both questions.
-Design or not comes from the IDE's title bar, which always carries the
-state in the first brackets — `[design]`, `[run]`, `[break]`. Reading it
-is a plain `GetWindowText`, safe from inside a message hook or a paint
-handler, and the design word is baselined at connect rather than
-compared against "design", so a localized IDE works too. Break or run
-then comes from `VBProject.Mode`, which cannot answer the first
-question: VB6 leaves it at `vbext_vm_Run` for a project sitting in the
-designer, so gating on it switched the whole add-in off. But the test
-here is the positive one, `= vbext_vm_Break`, which that quirk never
-produces — so a read that fails or lies costs at most a stood-down
-break mode, never a stood-down design mode. The title word in place
-when `Mode` first says Break is remembered as the break word, and after
-that break is recognized from the title alone.
+The argument that it should be is sound as far as it goes: at a
+breakpoint the project is suspended, the IDE is pumping its own message
+loop again, and the object model answers — verified against
+`D:\vb6bench spike-make`, where a second add-in enumerated
+`VBComponents` and `FileNames` in `[break]` without complaint. Stepping
+through code is also when the tab bar and the line numbers are wanted
+most, and the gutter leaves numbers behind from before the step.
 
-Everything the tab bar is drawn from — captions, icons, the dirty
-marker, git status — is captured when the tabs refresh, never while
-painting. `Redraw` also runs from `Form_Resize`, which the IDE triggers
-while a program is running, and object-model calls that come back empty
-there would otherwise bake a bar of blank, icon-less tabs into the
-form's `AutoRedraw` bitmap, where nothing repaints them.
+It was tried, and it hangs the IDE. Measured: 0% CPU and responsive in
+`[design]`; 100% of one core and not responding within a second of
+reaching `[break]`, reproducibly. It is **not** the editor overlays —
+the same hang happens with line numbers and indentation guides both
+off, which takes `Highlight_Active()` to False and makes the gutter and
+highlight paint paths no-ops. So it is something in the timer's own
+poll set looping against the IDE in break mode; `RefreshTabs` forcing
+the active MDI child back to maximized while the IDE re-docks the
+Immediate window is the obvious suspect, but it has not been pinned
+down. Until it is, break mode stands down with run mode — don't relax
+that without reproducing the measurement.
+
+### Reading the state
+
+The IDE's title bar always carries it in the first brackets —
+`[design]`, `[run]`, `[break]`, all three confirmed. A maximized MDI
+child appends a second pair (`... [design] - [frmMain (Code)]`), so
+only the first pair is read. `VBProject.Mode` looks like the proper
+answer and is not: VB6 leaves it at `vbext_vm_Run` for a project
+sitting in the designer, so gating on it switched the whole add-in off.
+Reading the title is also a plain `GetWindowText`, with no COM call
+from inside a message hook or a paint handler. The word is localized,
+so it is not compared against "design" — the add-in connects at IDE
+startup, which is design mode by definition, so whatever word is in the
+title then is the design word.
 
 Programs that install their own message hooks are what showed this up.
 If such a program also misbehaves on its own, check that its hooks are
