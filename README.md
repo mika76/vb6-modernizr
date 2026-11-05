@@ -385,7 +385,14 @@ Each refusal says which one it is:
   like every other command that touches the object model.
 - **Unsaved changes in the IDE.** Any component or project with pending
   edits blocks the switch and is named, because the reload would throw
-  those edits away with no way back. Save or undo them first.
+  those edits away with no way back. Save or undo them first. Note that
+  VB6 marks the forms a run loaded as changed even when nothing
+  changed, so a form can be listed after you have pressed F5; saving
+  it writes the same bytes back, and the message says so. The flag is
+  taken at its word rather than second-guessed: a `.frm` is a designer
+  block followed by the code and the object model exposes only the
+  code, so a form whose layout was edited would compare equal and lose
+  that edit in the reload.
 - **A project with nowhere to reload from.** A project that has never
   been saved, or several projects open that are not a saved project
   group, leaves no single file to reopen the IDE's state from.

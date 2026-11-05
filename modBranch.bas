@@ -100,7 +100,12 @@ Public Function Branch_SwitchTo(ByVal refName As String, _
                why & vbCrLf & _
                "Switching branches reloads the project from disk, which " & _
                "would throw them away." & vbCrLf & _
-               "Save them (Ctrl+S) or undo them, then switch.", _
+               "Save them (Ctrl+S) or undo them, then switch." & _
+               vbCrLf & vbCrLf & _
+               "If a form is listed and you have run the project since " & _
+               "opening it, this is probably nothing: VB6 marks the " & _
+               "forms a run loaded as changed even when they are not, " & _
+               "and saving them writes the same bytes back.", _
                vbExclamation, "Switch Branch"
         Exit Function
     End If
@@ -197,6 +202,17 @@ End Sub
 
 ' Anything a reload from disk would silently discard. Names up to a
 ' handful of them so the refusal is actionable.
+'
+' IsDirty is taken at its word, including its one known false
+' positive: VB6 marks the forms a run loaded as changed although
+' nothing changed, and a save then writes byte-identical files. The
+' tempting fix - clear the flag for components whose text still
+' equals the file - is not safe here. A .frm is a designer block
+' followed by the code, and the object model only hands back the
+' code, so a form whose layout was edited and whose code was not
+' would compare equal and have its real changes thrown away by the
+' reload. Refusing costs a Ctrl+S; guessing costs the user's work,
+' so the message explains the false positive instead.
 Private Function UnsavedWork(outWhy As String) As Boolean
     On Error Resume Next
     Const MAX_NAMED As Long = 8
