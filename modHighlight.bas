@@ -110,7 +110,7 @@ End Sub
 Public Sub Highlight_EnsureHooks()
     On Error Resume Next
     If Not Highlight_Active() Then Exit Sub
-    If Not Mode_IsDesign() Then Exit Sub
+    If Not Mode_IsIdle() Then Exit Sub
     Dim cp As VBIDE.CodePane, H As Long
     For Each cp In gVBE.CodePanes
         H = CodePaneHwnd(cp)
@@ -156,7 +156,7 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     On Error Resume Next
     If Not Highlight_Active() Then Exit Sub
     ' reads the object model - not while project code owns the thread
-    If Not Mode_IsDesign() Then Exit Sub
+    If Not Mode_IsIdle() Then Exit Sub
 
     Dim cp As VBIDE.CodePane
     Set cp = PaneFromHwnd(hwnd)
@@ -445,7 +445,7 @@ End Sub
 Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
     On Error Resume Next
     If Not Highlight_Active() Then Exit Sub
-    If Not Mode_IsDesign() Then Exit Sub
+    If Not Mode_IsIdle() Then Exit Sub
 
     ' The scrollbar is a child of the VbaWindow editor.
     Dim hPane As Long

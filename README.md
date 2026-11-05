@@ -253,29 +253,55 @@ load LF-normalized files.
   disconnect, but when hacking on those parts, test from a second VB6
   instance (F5) so a crash can't take your editor down.
 
-## Running a program while the add-in is loaded
+## Running or debugging a program while the add-in is loaded
 
 The IDE runs a project **in process, on the IDE's own thread**, so the
-add-in's WH_GETMESSAGE hook and its 400 ms poll timer would otherwise
-see the program being debugged: its keystrokes would be claimed by the
-add-in's shortcuts, its message loop would pump the add-in's timer, and
-every poll behind that timer (tab bar, gutter, bookmarks, git,
-auto-backup) would re-enter the IDE while it is executing project code.
+add-in's WH_GETMESSAGE hook and its 400 ms poll timer see the program
+being debugged: its message loop pumps the add-in's timer, and every
+poll behind that timer (tab bar, gutter, bookmarks, git, auto-backup)
+would re-enter the IDE while it is executing project code.
 
-`modRunMode` gates all of it: nothing automatic runs unless the IDE is
-in design mode, and menu commands other than About and the shortcut
-sheet say so and decline. While a program runs the editor overlays stop
-repainting, and they come back when it stops.
+`modRunMode` tells three states apart, because "not design mode" covers
+two very different situations:
 
-The state is read from the IDE's title bar, which always carries it in
-the first brackets - `[design]`, `[run]`, `[break]`. `VBProject.Mode`
-looks like the proper answer and is not: VB6 leaves it at
-`vbext_vm_Run` for a project sitting in the designer, so gating on it
-switched the whole add-in off. Reading the title is also a plain
-`GetWindowText`, with no COM call from inside a message hook. The word
-is localized, so it is not compared against "design" - the add-in
-connects at IDE startup, which is design mode by definition, so
-whatever word is in the title then is the design word.
+- **`[run]`** — project code owns the thread. Nothing automatic runs,
+  and menu commands other than About and the shortcut sheet say so and
+  decline.
+- **`[break]`** — a breakpoint or Step Into has suspended the project
+  and the IDE is pumping its own message loop again. The object model
+  answers there, so the add-in stays fully awake: tabs, line numbers,
+  highlighting and git keep working while you step through code, which
+  is when they are wanted most.
+- **`[design]`** — everything on, as always.
+
+Keyboard shortcuts are not gated on the mode at all. Every one of them
+already requires focus to be in an IDE code pane, in one of the add-in's
+own text boxes, or over a window the add-in subclassed, and a running
+program's windows are unowned top-level windows that are none of those.
+Gating the hook on design mode as well only took Ctrl+F, Ctrl+D and the
+rest away from the IDE's own editor for as long as a program was loaded.
+
+Detection needs two sources, because neither answers both questions.
+Design or not comes from the IDE's title bar, which always carries the
+state in the first brackets — `[design]`, `[run]`, `[break]`. Reading it
+is a plain `GetWindowText`, safe from inside a message hook or a paint
+handler, and the design word is baselined at connect rather than
+compared against "design", so a localized IDE works too. Break or run
+then comes from `VBProject.Mode`, which cannot answer the first
+question: VB6 leaves it at `vbext_vm_Run` for a project sitting in the
+designer, so gating on it switched the whole add-in off. But the test
+here is the positive one, `= vbext_vm_Break`, which that quirk never
+produces — so a read that fails or lies costs at most a stood-down
+break mode, never a stood-down design mode. The title word in place
+when `Mode` first says Break is remembered as the break word, and after
+that break is recognized from the title alone.
+
+Everything the tab bar is drawn from — captions, icons, the dirty
+marker, git status — is captured when the tabs refresh, never while
+painting. `Redraw` also runs from `Form_Resize`, which the IDE triggers
+while a program is running, and object-model calls that come back empty
+there would otherwise bake a bar of blank, icon-less tabs into the
+form's `AutoRedraw` bitmap, where nothing repaints them.
 
 Programs that install their own message hooks are what showed this up.
 If such a program also misbehaves on its own, check that its hooks are

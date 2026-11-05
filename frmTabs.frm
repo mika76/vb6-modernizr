@@ -69,7 +69,23 @@ Option Explicit
 
 Private Const DROPBTN_W As Long = 20
 
+' Everything the paint path needs about one tab, captured when the
+' tabs are refreshed. Drawing reads this and nothing else, because
+' every field below costs an object-model call - w.Caption, w.Type, the
+' component behind the window, the git status of its files - and Redraw
+' also runs from Form_Resize, which the IDE triggers while it is
+' running a project. Those calls come back empty there, and AutoRedraw
+' then bakes a bar of blank, icon-less tabs into the form's bitmap that
+' nothing repaints until the signature changes again.
+Private Type TabInfo
+    plain As String              ' caption as the IDE shows it
+    cap As String                ' as drawn: plain plus the dirty marker
+    icon As Long
+    gitDirty As Boolean
+End Type
+
 Private mWins As Collection      ' of VBIDE.Window, tab order
+Private mInfo() As TabInfo       ' 1-based, parallel to mWins
 Private mSig As String           ' change-detection signature
 Private mActiveIdx As Long       ' 1-based index into mWins, 0 = none
 
@@ -114,12 +130,14 @@ End Sub
 Private Sub tmrRefresh_Timer()
     On Error Resume Next
     If gVBE Is Nothing Then Exit Sub
-    ' While the IDE runs or debugs a project, project code owns this
-    ' thread and this timer fires inside its message loop. Every poll
-    ' below walks the object model or shells out, so none of it can
-    ' happen until the program stops.
+    ' While the IDE is RUNNING a project, project code owns this thread
+    ' and this timer fires inside its message loop. Every poll below
+    ' walks the object model or shells out, so none of it can happen
+    ' until the program stops - or stops at a breakpoint, which hands
+    ' the thread back to the IDE and is when this is wanted most (see
+    ' modRunMode).
     Mode_Poll
-    If Not Mode_IsDesign() Then Exit Sub
+    If Not Mode_IsIdle() Then Exit Sub
     If gTabBarVisible Then RefreshTabs False
     BM_Poll
     Git_Poll
@@ -200,6 +218,7 @@ Private Sub RefreshTabs(ByVal force As Boolean)
     If sig = mSig And Not force Then Exit Sub
     mSig = sig
     Set mWins = ordered
+    BuildInfo
 
     mActiveIdx = 0
     If Len(actCap) > 0 Then
@@ -212,6 +231,24 @@ Private Sub RefreshTabs(ByVal force As Boolean)
     End If
 
     Redraw
+End Sub
+
+' Ask the object model everything the tabs will be drawn from, once
+' per refresh, while the IDE is known to be answering.
+Private Sub BuildInfo()
+    On Error Resume Next
+    Dim n As Long, i As Long, nm As String, p As Long
+    n = mWins.Count
+    ReDim mInfo(1 To n + 1)
+    For i = 1 To n
+        mInfo(i).plain = TabCaption(mWins(i))
+        mInfo(i).cap = TabDispCaption(mWins(i))
+        mInfo(i).icon = TabIcon(mWins(i))
+        nm = mInfo(i).plain
+        p = InStrRev(nm, " (")
+        If p > 0 Then nm = Left$(nm, p - 1)
+        mInfo(i).gitDirty = Git_IsCompChanged(nm)
+    Next
 End Sub
 
 Private Function WinKey(ByVal w As VBIDE.Window) As String
@@ -294,7 +331,7 @@ TryLayout:
     ' one width for both states keeps tabs from resizing on activation
     Me.FontBold = True
     For i = mScroll To n
-        cap = TabDispCaption(mWins(i))
+        cap = mInfo(i).cap
         tw = Me.TextWidth(cap) + ScaleForDpi(35)
         If tw < ScaleForDpi(60) Then tw = ScaleForDpi(60)
         If tw > ScaleForDpi(200) Then tw = ScaleForDpi(200)
@@ -350,10 +387,10 @@ End Function
 
 Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     On Error Resume Next
-    Dim l As Long, r As Long, H As Long, w As VBIDE.Window
+    Dim l As Long, r As Long, H As Long, idx As Long
     l = mTabL(slot): r = mTabR(slot)
     H = Me.ScaleHeight
-    Set w = mWins(mTabIdx(slot))
+    idx = mTabIdx(slot)
 
     If active Then
         ' raised tab: highlight top/left, shadow right, no bottom edge
@@ -370,14 +407,10 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     ' shell file icon for the component behind this window
     Dim gy As Long
     gy = H \ 2
-    DrawIcon16 Me.hdc, l + ScaleForDpi(5), gy - ScaleForDpi(8), TabIcon(w)
+    DrawIcon16 Me.hdc, l + ScaleForDpi(5), gy - ScaleForDpi(8), mInfo(idx).icon
 
     ' orange badge on the icon corner = file modified vs git HEAD
-    Dim nm As String, pp As Long
-    nm = TabCaption(w)
-    pp = InStrRev(nm, " (")
-    If pp > 0 Then nm = Left$(nm, pp - 1)
-    If Git_IsCompChanged(nm) Then
+    If mInfo(idx).gitDirty Then
         Me.Line (l + ScaleForDpi(16), gy - ScaleForDpi(9))- _
                 (l + ScaleForDpi(21), gy - ScaleForDpi(4)), THEME_ACCENT, BF
     End If
@@ -385,7 +418,7 @@ Private Sub DrawTab(ByVal slot As Long, ByVal active As Boolean)
     ' caption, clipped to the tab; measure in the style it draws in
     Dim full As String, cap As String
     Me.FontBold = active
-    full = TabDispCaption(w)
+    full = mInfo(idx).cap
     cap = full
     Do While Me.TextWidth(cap) > (r - l - ScaleForDpi(33)) And Len(cap) > 1
         cap = Left$(cap, Len(cap) - 1)
@@ -575,7 +608,7 @@ Private Sub ShowWindowList()
 
     For i = 1 To mWins.Count
         If i > 1 Then Load mnuListItem(i - 1)
-        mnuListItem(i - 1).Caption = Replace$(TabCaption(mWins(i)), "&", "&&")
+        mnuListItem(i - 1).Caption = Replace$(mInfo(i).plain, "&", "&&")
         mnuListItem(i - 1).Checked = (i = mActiveIdx)
     Next
 

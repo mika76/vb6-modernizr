@@ -64,13 +64,18 @@ End Sub
 Private Function WheelGetMsgProc(ByVal nCode As Long, ByVal wParam As Long, _
         ByVal lParam As Long) As Long
     On Error Resume Next
-    ' The IDE runs a project in process on this very thread, so
-    ' without the Mode_IsDesign gate every message of the program
-    ' being debugged comes through here: the keys below would be
-    ' taken away from it, and a program with its own WH_GETMESSAGE
-    ' hook would share the chain with handlers that call back into
-    ' the IDE object model (see modRunMode).
-    If nCode = HC_ACTION And wParam = PM_REMOVE And Mode_IsDesign() Then
+    ' The IDE runs a project in process on this very thread, so every
+    ' message of a program being debugged arrives here too. What keeps
+    ' the add-in's hands off it is not the IDE's mode but the focus
+    ' test on each shortcut below: they all require focus in an IDE
+    ' code pane, in one of the add-in's own text boxes, or over a
+    ' window the add-in subclassed, and a running program's windows are
+    ' unowned top-level windows that are none of those. Gating the
+    ' whole hook on design mode instead only took Ctrl+F, Ctrl+D and
+    ' the rest away from the IDE's own editor for as long as a program
+    ' was loaded - including at a breakpoint, where the IDE is fully
+    ' interactive (see modRunMode).
+    If nCode = HC_ACTION And wParam = PM_REMOVE Then
         Dim m As MSGSTRUCT, swallow As Boolean
         CopyMemory m, ByVal lParam, Len(m)
 
@@ -168,7 +173,7 @@ Private Function HandleKeyDown(m As MSGSTRUCT) As Boolean
         If ctrl And FocusInCodePane() Then
             Edit_HighlightWord            ' Ctrl+F3 = highlight word
             HandleKeyDown = True
-        ElseIf gFindBarVisible Then
+        ElseIf gFindBarVisible And FocusInIDE() Then
             frmFind.DoFindPublic Not shift
             HandleKeyDown = True
         End If
