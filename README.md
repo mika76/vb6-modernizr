@@ -85,8 +85,10 @@ so the IDE never blocks. Status refreshes every ~5 s.
   scroll position survive the background status refresh.
 - **Log** (Ctrl+Shift+L): commit graph drawn by the add-in — colored
   branch lanes, rings for merges, branch/tag/HEAD chips — with
-  hash/date/author/subject columns, optional all-branches; click a
-  commit for its message + diffstat.
+  hash/date/author/subject columns; click a commit for its message +
+  diffstat. The scope box picks whose history to draw - any one
+  branch, local or remote-tracking, or every branch at once - and
+  opens on the branch that is checked out.
 - **Blame** (Ctrl+Shift+B): commit/author/date/summary for the
   current line.
 - **Changed-line markers**: margin bars (green = added, blue =

@@ -11,13 +11,13 @@ Begin VB.Form frmGitLog
    ScaleWidth      =   10200
    ShowInTaskbar   =   0   'False
    StartUpPosition =   2  'CenterScreen
-   Begin VB.CheckBox chkAll
-      Caption         =   "All &branches"
-      Height          =   255
+   Begin VB.ComboBox cboScope
+      Height          =   315
       Left            =   180
+      Style           =   2  'Dropdown List
       TabIndex        =   0
-      Top             =   180
-      Width           =   1500
+      Top             =   150
+      Width           =   2800
    End
    Begin VB.CommandButton cmdRefresh
       Caption         =   "&Refresh"
@@ -60,10 +60,10 @@ Begin VB.Form frmGitLog
    Begin VB.Label lblStatus
       Caption         =   ""
       Height          =   240
-      Left            =   1860
+      Left            =   3160
       TabIndex        =   5
       Top             =   195
-      Width           =   7000
+      Width           =   5700
    End
 End
 Attribute VB_Name = "frmGitLog"
@@ -74,7 +74,10 @@ Attribute VB_Exposed = False
 Option Explicit
 
 ' =====================================================================
-'  Git Log (Ctrl+Shift+L). The commit graph is drawn by us: commits
+'  Git Log (Ctrl+Shift+L). The scope box picks whose history to draw -
+'  any one branch, local or remote-tracking, or every branch at once;
+'  it opens on the branch that is checked out. The commit graph is
+'  drawn by us: commits
 '  come in with parent hashes (%h %P), lanes are laid out top-down
 '  with the classic active-lanes algorithm, then painted as colored
 '  lane lines, merge/branch diagonals and commit dots (ring = merge).
@@ -101,6 +104,14 @@ Private mSegs() As String
 Private mCount As Long
 Private mMaxLane As Long
 
+' One entry per scope-box item: the argument it adds to git log.
+' "--all" for every branch, a quoted ref for one branch. An empty
+' string adds nothing, which logs HEAD - what an unfilled box falls
+' back to.
+Private mScopeArg() As String
+Private mScopeCount As Long
+Private mFilling As Boolean     ' suppress Click while the box is built
+
 Private mSelRow As Long         ' selected row, -1 = none
 Private mTop As Long            ' first visible row
 Private mRowH As Long
@@ -116,8 +127,52 @@ Public Sub ShowLog()
         Scroll_Attach picLog.hwnd, Me
     End If
     Me.Show vbModeless
+    LoadScopes
     LoadLog
 End Sub
+
+' Every branch the repo has, plus "all branches", with the one that is
+' checked out selected - so the window opens on the history you are
+' standing on, which is what it always used to show.
+Private Sub LoadScopes()
+    On Error Resume Next
+    Dim nm() As String, isRemote() As Boolean, isCur() As Boolean
+    Dim n As Long, i As Long, sel As Long
+
+    mFilling = True
+    cboScope.Clear
+    mScopeCount = 0
+    ReDim mScopeArg(0 To 16)
+
+    AddScope "All branches", "--all"
+    n = Git_BranchList(nm, isRemote, isCur)
+    For i = 0 To n - 1
+        If isCur(i) Then
+            AddScope nm(i) & "  (current)", """" & nm(i) & """"
+            sel = mScopeCount - 1
+        Else
+            AddScope nm(i), """" & nm(i) & """"
+        End If
+    Next
+
+    If cboScope.ListCount > 0 Then cboScope.ListIndex = sel
+    mFilling = False
+End Sub
+
+Private Sub AddScope(ByVal caption As String, ByVal arg As String)
+    If mScopeCount > UBound(mScopeArg) Then _
+        ReDim Preserve mScopeArg(0 To mScopeCount * 2)
+    cboScope.AddItem caption
+    mScopeArg(mScopeCount) = arg
+    mScopeCount = mScopeCount + 1
+End Sub
+
+Private Function ScopeArg() As String
+    On Error Resume Next
+    Dim i As Long
+    i = cboScope.ListIndex
+    If i >= 0 And i < mScopeCount Then ScopeArg = mScopeArg(i)
+End Function
 
 ' modScroll callback: scrollbar drag, arrows, page clicks, wheel
 Public Sub ScrollTo(ByVal pos As Long)
@@ -133,7 +188,8 @@ Private Sub cmdRefresh_Click()
     LoadLog
 End Sub
 
-Private Sub chkAll_Click()
+Private Sub cboScope_Click()
+    If mFilling Then Exit Sub
     LoadLog
 End Sub
 
@@ -164,7 +220,9 @@ Private Sub LoadLog()
     args = "log -n " & MAX_COMMITS & " --topo-order --date=short " & _
            "--pretty=format:" & Chr$(34) & _
            "%H%x09%P%x09%ad%x09%an%x09%D%x09%s" & Chr$(34)
-    If chkAll.Value = vbChecked Then args = args & " --all"
+    Dim scope As String
+    scope = ScopeArg()
+    If Len(scope) > 0 Then args = args & " " & scope
 
     Dim res As String
     res = Git_RunSync(args, 15000)
