@@ -200,8 +200,30 @@ drops it from the Add-In Manager until the DLL is re-registered with
 administrator rights. Leave the setting alone, and don't replace that
 file unless you mean to break compatibility.
 
-Command-line build (avoids the UAC prompt if VB6.EXE is flagged
-run-as-administrator):
+Command-line build — **prefer the elevated form**. It is the only one
+whose registration step completes, so it is also the only one that
+leaves the add-in in the Add-In Manager's list. Run it from the repo
+root; it raises one UAC prompt:
+
+```powershell
+Start-Process -FilePath "C:\Program Files (x86)\Microsoft Visual Studio\VB98\VB6.EXE" `
+  -ArgumentList '/make','VB6Modernizr.vbp','/out','build.log' `
+  -WorkingDirectory $PWD -Verb RunAs -Wait
+```
+
+`build.log` then reads only `Build of 'VB6Modernizr.dll' succeeded.`,
+and the Add-In Designer writes the `HKCU` key itself — nothing to put
+back by hand.
+
+Use `Start-Process -Wait`, not PowerShell's call operator. `VB6.EXE` is
+a GUI application, so `& VB6.EXE /make ...` returns immediately: the
+build is still running when the next command reads `build.log`, there is
+no exit code, and a failure looks exactly like a missing file. From
+`bash`, note that MSYS rewrites a bare `/make` into `C:\Program
+Files\Git\make` — use `//make`, or `MSYS2_ARG_CONV_EXCL='*'`.
+
+The de-elevated form skips the UAC prompt and costs you the
+registration:
 
 ```bat
 cmd /c "set __COMPAT_LAYER=RunAsInvoker&& "C:\Program Files (x86)\Microsoft Visual Studio\VB98\VB6.EXE" /make VB6Modernizr.vbp /out build.log"
@@ -213,8 +235,7 @@ compatibility keeps the COM registration pointing at the new DLL, so the
 add-in still works — but the failed step **removes the add-in from the
 Add-In Manager's list** on the way through, and VB6 comes up without it.
 Put the registry key from *Installing / loading* back (no administrator
-rights needed), or build once as administrator to have it written for
-you.
+rights needed), or rebuild elevated and have it written for you.
 
 One more trap: the `.vbp` and every source file must keep **CRLF** line
 endings. An editor or a `sed -i` that rewrites one with LF leaves VB6
@@ -231,10 +252,11 @@ tools that write the file directly.
    registry entry — `vbaddin.ini` is the VB5 mechanism and VB6 does not
    read it. Under `HKCU\Software\Microsoft\Visual Basic\6.0\Addins`,
    create a key `VB6Modernizr.Connect` holding `FriendlyName` =
-   "VB6 Modernizr" (REG_SZ) and `LoadBehavior` = 0 (REG_DWORD; VB6
-   raises it to 3 once you tick *Load on Startup*). A successful
-   registration writes this key itself, so if it keeps vanishing the
-   DLL is not registered.
+   "VB6 Modernizr" (REG_SZ), `LoadBehavior` = 0 (REG_DWORD; VB6 raises
+   it to 3 once you tick *Load on Startup*) and `CommandLineSafe` = 0
+   (REG_DWORD). A successful registration writes this key itself, so if
+   it keeps vanishing the DLL is not registered — build elevated (see
+   *Building*) and it will stop.
 
 To uninstall: unload it in the Add-In Manager, then
 `regsvr32 /u VB6Modernizr.dll`.
