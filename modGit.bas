@@ -55,6 +55,14 @@ Private mChangedKeys As Collection ' full paths of changed files, in order
 Private mGeneration As Long        ' bumps on every status parse
 Private mDiffGen As Collection     ' key = lcase path, item = generation
 
+' --- branch switching ------------------------------------------------
+
+' Set for as long as a branch switch is in flight. The project is
+' being closed and reopened under the IDE in that window, so nothing
+' on the tab-bar timer may walk the object model or shell out to git:
+' half of what it would ask about is being torn down and rebuilt.
+Public gGitSwitching As Boolean
+
 ' --- changed-line markers ----------------------------------------------
 
 Public Const GITK_ADD As Long = 1
@@ -478,6 +486,22 @@ End Sub
 
 Public Function Git_RunSync(ByVal args As String, _
         ByVal timeoutMs As Long) As String
+    Git_RunSync = RunGit(args, timeoutMs, True)
+End Function
+
+' git, synchronously, in the repo root; returns stdout and stderr.
+'
+' pumpMsgs says whether the wait runs DoEvents. Everything the user
+' invokes directly does, so the IDE keeps painting through a slow
+' command. The branch switch does not: from the moment "git checkout"
+' starts rewriting the sources until the project has been reloaded,
+' every component the IDE holds in memory is stale, and one DoEvents
+' is all a Ctrl+S would need to write that stale code straight back
+' over the branch just checked out. No message loop in that window
+' means no keystroke, no timer tick and no add-in poll can get in -
+' the IDE simply sits still for the length of the checkout.
+Private Function RunGit(ByVal args As String, ByVal timeoutMs As Long, _
+        ByVal pumpMsgs As Boolean) As String
     On Error Resume Next
     If Len(mRepoRoot) = 0 Then Exit Function
     Dim out As String, pid As Long, hProc As Long, waited As Long
@@ -488,12 +512,12 @@ Public Function Git_RunSync(ByVal args As String, _
     hProc = OpenProcess(PROCESS_QUERY_INFORMATION Or SYNCHRONIZE, 0, pid)
     Do While Not ProcessDone(hProc)
         Sleep 40
-        DoEvents
+        If pumpMsgs Then DoEvents
         waited = waited + 40
         If waited > timeoutMs Then Exit Do
     Loop
     CloseHandle hProc
-    Git_RunSync = ReadAll(out)
+    RunGit = ReadAll(out)
     If Len(Dir$(out)) > 0 Then Kill out
 End Function
 
@@ -614,6 +638,182 @@ Public Sub Git_StatusRefreshSync()
     EnqueueDiffsForOpenPanes
     frmTabs.ForceRedraw
 End Sub
+
+' =====================================================================
+'  Branches
+' =====================================================================
+
+' Every branch the picker offers, in the order it shows them: the
+' local ones first, most recently committed first, then the
+' remote-tracking ones. Parallel arrays; returns the count.
+Public Function Git_BranchList(outName() As String, _
+        outRemote() As Boolean, outCur() As Boolean) As Long
+    On Error Resume Next
+    Dim n As Long, nLocal As Long
+    ReDim outName(0 To 16)
+    ReDim outRemote(0 To 16)
+    ReDim outCur(0 To 16)
+    If Len(mRepoRoot) = 0 Then Exit Function
+
+    ' --sort wants git 2.7; an older one prints usage instead of a
+    ' listing, which parses as no branches at all - so ask again
+    ' without it rather than showing an empty picker.
+    AddBranches "branch --list --sort=-committerdate", False, _
+                outName, outRemote, outCur, n
+    If n = 0 Then
+        AddBranches "branch --list", False, outName, outRemote, outCur, n
+    End If
+
+    nLocal = n
+    AddBranches "branch -r --sort=-committerdate", True, _
+                outName, outRemote, outCur, n
+    If n = nLocal Then
+        AddBranches "branch -r", True, outName, outRemote, outCur, n
+    End If
+
+    Git_BranchList = n
+End Function
+
+' Parse a "git branch" listing into the arrays. Its lines are
+' "<mark><space><name>" - "* main", "  dev", "  origin/main" - and
+' anything not shaped like that (git's own error output) drops out
+' here. Skipped as well: the "* (HEAD detached at ...)" pseudo entry,
+' which is a state rather than a branch, and the
+' "origin/HEAD -> origin/main" symref, which is a second name for a
+' branch already in the list.
+Private Sub AddBranches(ByVal args As String, ByVal isRemote As Boolean, _
+        outName() As String, outRemote() As Boolean, outCur() As Boolean, _
+        n As Long)
+    On Error Resume Next
+    Dim res As String, lines() As String, i As Long
+    Dim s As String, mark As String, nm As String
+
+    res = RunGit(args, 10000, True)
+    If Len(res) = 0 Then Exit Sub
+
+    lines = Split(res, vbLf)
+    For i = 0 To UBound(lines)
+        s = Replace$(lines(i), vbCr, "")
+        If Len(s) > 2 Then
+            mark = Left$(s, 1)
+            If (mark = "*" Or mark = " " Or mark = "+") And _
+               Mid$(s, 2, 1) = " " Then
+                nm = Trim$(Mid$(s, 3))
+                If Len(nm) > 0 And Left$(nm, 1) <> "(" And _
+                   InStr(nm, " -> ") = 0 Then
+                    If n > UBound(outName) Then
+                        ReDim Preserve outName(0 To n * 2)
+                        ReDim Preserve outRemote(0 To n * 2)
+                        ReDim Preserve outCur(0 To n * 2)
+                    End If
+                    outName(n) = nm
+                    outRemote(n) = isRemote
+                    outCur(n) = (mark = "*")
+                    n = n + 1
+                End If
+            End If
+        End If
+    Next
+End Sub
+
+' The local branch a picker entry lands on: a remote-tracking
+' "origin/topic" is checked out as a local "topic" that tracks it.
+Public Function Git_LocalNameFor(ByVal refName As String, _
+        ByVal isRemote As Boolean) As String
+    Git_LocalNameFor = refName
+    If Not isRemote Then Exit Function
+    Dim p As Long
+    p = InStr(refName, "/")
+    If p > 0 Then Git_LocalNameFor = Mid$(refName, p + 1)
+End Function
+
+' Tracked modifications in the working tree, asked fresh rather than
+' read off the polled cache. Untracked files are deliberately not
+' reported: git carries them across a checkout without complaint, and
+' refusing a branch switch over a scratch file would be nothing but
+' in the way.
+Public Function Git_HasTrackedChanges() As Boolean
+    Git_HasTrackedChanges = TrackedChangesNow()
+End Function
+
+Private Function TrackedChangesNow() As Boolean
+    On Error Resume Next
+    Dim res As String, lines() As String, i As Long, s As String
+    res = RunGit("status --porcelain=v1", 15000, True)
+    lines = Split(res, vbLf)
+    For i = 0 To UBound(lines)
+        s = Replace$(lines(i), vbCr, "")
+        If Len(s) > 3 And Left$(s, 2) <> "??" Then
+            TrackedChangesNow = True
+            Exit Function
+        End If
+    Next
+End Function
+
+' Stash the tracked modifications so a checkout has a clean tree to
+' work with. Returns "" when the tree came out clean, otherwise what
+' git said. Untracked files are left where they are, on purpose.
+Public Function Git_StashTracked(ByVal msg As String) As String
+    On Error Resume Next
+    If Len(mRepoRoot) = 0 Then Exit Function
+    Dim res As String
+    res = RunGit("stash push -m """ & Replace$(msg, """", "'") & """", _
+                 60000, True)
+    If Not TrackedChangesNow() Then Exit Function
+    Git_StashTracked = Trim$(res)
+    If Len(Git_StashTracked) = 0 Then _
+        Git_StashTracked = "The working tree still has changes."
+End Function
+
+' Check out a branch. Returns "" on success, otherwise git's own
+' output for the caller to put in front of the user - a checkout
+' refuses for good reasons (local changes in the way, an unknown
+' name) and those reasons are worth reading.
+'
+' Success is decided by asking where HEAD ended up, not by git's
+' chatter: a checkout prints advice and warnings on stderr when it
+' worked perfectly well, and the only thing that matters here is
+' whether the working tree actually moved.
+'
+' Both commands run quiet - see RunGit. The IDE's in-memory copy of
+' every source file goes stale the instant the first one starts.
+Public Function Git_Checkout(ByVal refName As String, _
+        ByVal isRemote As Boolean) As String
+    On Error Resume Next
+    If Len(mRepoRoot) = 0 Then
+        Git_Checkout = "The project is not inside a git repository."
+        Exit Function
+    End If
+
+    Dim loc As String, res As String, nowBr As String
+    loc = Git_LocalNameFor(refName, isRemote)
+    If isRemote And Not LocalBranchExists(loc) Then
+        ' first time on this remote branch: create the local one and
+        ' set it to track
+        res = RunGit("checkout -t """ & refName & """", 60000, False)
+    Else
+        res = RunGit("checkout """ & loc & """", 60000, False)
+    End If
+
+    nowBr = OneLine(RunGit("rev-parse --abbrev-ref HEAD", 10000, False))
+    If StrComp(nowBr, loc, vbTextCompare) = 0 Then Exit Function
+
+    Git_Checkout = Trim$(res)
+    If Len(Git_Checkout) = 0 Then
+        Git_Checkout = "git said nothing, but HEAD is still on '" & _
+                       nowBr & "'."
+    End If
+End Function
+
+Private Function LocalBranchExists(ByVal nm As String) As Boolean
+    LocalBranchExists = Len(OneLine(RunGit( _
+        "rev-parse --verify --quiet ""refs/heads/" & nm & """", _
+        10000, True))) > 0
+End Function
+
+Private Function OneLine(ByVal s As String) As String
+    OneLine = Trim$(Replace$(Replace$(s, vbCr, ""), vbLf, ""))
+End Function
 
 ' =====================================================================
 '  Small utilities

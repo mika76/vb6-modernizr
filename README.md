@@ -72,6 +72,13 @@ Repo auto-detected from the project folder; everything shells out to
 `git.exe` asynchronously (hidden process, output polled by a timer),
 so the IDE never blocks. Status refreshes every ~5 s.
 
+- **Switch branch** (Modernizr ▸ Switch Branch, the toolbar's
+  *Branch* button, or a click on the branch name in the tab bar):
+  type-to-filter list of local branches, most recently committed
+  first, then the remote-tracking ones; picking a remote branch
+  creates a local branch tracking it. The checkout is followed by a
+  full project reload - see [Switching branches](#switching-branches)
+  for why, and for what the add-in refuses to do.
 - **Changes window** (Ctrl+Shift+G): staged/unstaged lists (file
   icons, multi-select) with stage/unstage selected or all; Commit
   commits the staged set; double-click opens the file. Selection and
@@ -323,6 +330,82 @@ disabled in the IDE - the usual guard is
 `hook.HookEnabled = (App.LogMode <> 0)`, since `App.LogMode` is 0 only
 when interpreted.
 
+## Switching branches
+
+Checking out a branch from inside the IDE is not just a `git checkout`,
+because **VB6 reads every source file into memory when the project opens
+and never looks at the file again**. The moment a checkout rewrites the
+`.frm`/`.bas`/`.cls` files, every code window is showing the old
+branch's code with nothing anywhere to say so - and the next Ctrl+S
+writes that stale code straight back over the branch you just checked
+out. The `.vbp` can differ between branches too: one may have components
+the other does not.
+
+Nothing in the extensibility model reloads a component from disk, so
+after a successful checkout the add-in makes VB6 read the project again
+from scratch:
+
+```vb
+gVBE.VBProjects.AddFromFile path, True      ' Exclusive:=True
+```
+
+which is exactly what File ▸ Open Project does - it closes what is open
+and loads the project fresh. `path` is the project group file when a
+group is open (`VBProjects.FileName` returns the `.vbg`), otherwise the
+single project's `.vbp`.
+
+Reloading components one at a time (`VBComponents.Remove` + `AddFile`)
+was considered and rejected: it rewrites the `.vbp`'s component order,
+cannot follow a component that exists on only one of the branches, and
+leaves the project dirty - which is the one state a fresh checkout must
+never be left in.
+
+**Your open windows come back.** Before the checkout the add-in records
+which components had a code window or a designer open, the caret line
+and column and the scroll position in each, and which window was in
+front; afterwards it reopens them and puts the carets back, clamped,
+since the new branch's module may be shorter. The tab bar's
+left-to-right order survives on its own. Anything the new branch does
+not have is quietly skipped.
+
+**There is no window in which stale code can be saved.** The git
+commands for the switch run without pumping the IDE's message loop - no
+`DoEvents` - so from the checkout starting to the reload finishing the
+IDE processes no messages at all: no Ctrl+S, no timer tick, no poll of
+the add-in's own. The IDE simply sits still for the length of the
+checkout. A flag then keeps the tab-bar timer out of the reload itself,
+which does pump.
+
+### What it refuses to do
+
+Each refusal says which one it is:
+
+- **A project running or being debugged.** A checkout under a project
+  the IDE is executing is never safe, so the switch needs design mode,
+  like every other command that touches the object model.
+- **Unsaved changes in the IDE.** Any component or project with pending
+  edits blocks the switch and is named, because the reload would throw
+  those edits away with no way back. Save or undo them first.
+- **A project with nowhere to reload from.** A project that has never
+  been saved, or several projects open that are not a saved project
+  group, leaves no single file to reopen the IDE's state from.
+- **A dirty working tree**, offered three ways: stash it (`git stash
+  push`, tracked files only), switch and let git carry the changes
+  across, or stay put. Untracked files are ignored on purpose - git
+  never minds them during a checkout. A stash is *not* popped for you;
+  the message says so.
+- **git's own refusals** - local changes in the way, an unknown branch
+  name - are shown verbatim, because those reasons are worth reading.
+  Success is decided by asking where `HEAD` actually ended up, not by
+  whether git printed anything: a checkout prints advice and warnings
+  on stderr when it worked perfectly well.
+- **The `.vbp` missing on the branch just checked out.** The reload is
+  skipped and you are told loudly not to save, rather than having the
+  project closed out from under you.
+
+Creating a branch is deliberately not part of this - the add-in switches
+between branches that already exist.
+
 ## Known limitations
 
 - Highlight/guide geometry is calibrated empirically (registry font +
@@ -336,3 +419,15 @@ when interpreted.
 - Unstaging uses `git reset HEAD` (works on any git); in a brand-new
   repo with zero commits it's a no-op until the first commit exists.
 - Tab drag-reorder is per-session; order resets on IDE restart.
+- Switching branches closes and reopens the whole project, because
+  nothing short of that makes VB6 re-read a source file from disk.
+  Code windows, designers and carets are restored; breakpoints,
+  watches, the Immediate window's contents and the undo history are
+  not - VB6 drops those when a project closes.
+- Switching with several projects open needs them to be a saved
+  project group (`.vbg`); otherwise there is no single file to reopen
+  them all from, and the switch is refused.
+- The reload is a real File ▸ Open Project, so anything VB6 would
+  normally prompt about when opening the project it will prompt about
+  then - a source-control binding (`MSSCCPRJ.SCC`), or a missing
+  reference or control.

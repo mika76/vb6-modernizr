@@ -116,6 +116,7 @@ Public Sub DoAction(ByVal act As String)
     Case "bmtoggle":  BM_Toggle
     Case "bmnext":    BM_NextBookmark
     Case "bmclear":   BM_ClearAll
+    Case "gitbranch": Branch_ShowPicker
     Case "gitblame":  Git_BlameCurrentLine
     Case "dup":       Edit_DuplicateLines
     Case "moveup":    Edit_MoveLinesUp

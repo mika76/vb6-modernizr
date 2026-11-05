@@ -64,7 +64,9 @@ Option Explicit
 '  Tab bar for the IDE's MDI windows (code + designer windows).
 '  Owner drawn in classic VB6 3D style. Left click activates,
 '  middle click closes, right click shows a context menu, and the
-'  drop-down button at the right lists every window.
+'  drop-down button at the right lists every window. The git
+'  branch label at the right end is a button too: it opens the
+'  branch picker.
 ' =====================================================================
 
 Private Const DROPBTN_W As Long = 20
@@ -94,6 +96,8 @@ Private mTabR() As Long
 Private mTabIdx() As Long        ' mWins index for each drawn tab
 Private mTabCount As Long        ' number of drawn (visible) tabs
 Private mScroll As Long          ' first visible tab (1-based)
+Private mGitL As Long            ' branch-label hit rect; equal
+Private mGitR As Long            ' ... when there is no label
 
 Private mCtxIdx As Long          ' tab targeted by the context menu
 Private mLastAct As String       ' last active-window key fed to MRU
@@ -130,6 +134,10 @@ End Sub
 Private Sub tmrRefresh_Timer()
     On Error Resume Next
     If gVBE Is Nothing Then Exit Sub
+    ' A branch switch is closing and reopening the project under
+    ' the IDE. Every poll below walks an object model that is
+    ' being torn down and rebuilt; modBranch repaints when done.
+    If gGitSwitching Then Exit Sub
     ' While the IDE runs or debugs a project, project code owns this
     ' thread and this timer fires inside its message loop. Every poll
     ' below walks the object model or shells out, so none of it can
@@ -296,6 +304,12 @@ Private Sub Redraw()
     ' bottom shadow line, classic 3D edge
     Me.Line (0, H - 1)-(w, H - 1), vb3DShadow
 
+    ' cleared up front: every early exit below leaves the bar
+    ' without a branch label, and a stale hit rect would make
+    ' empty space open the branch picker
+    mGitL = 0
+    mGitR = 0
+
     If mWins Is Nothing Then Exit Sub
     Dim n As Long
     n = mWins.Count
@@ -311,6 +325,8 @@ Private Sub Redraw()
     If Len(gitLbl) > 0 Then
         If Git_RepoDirty() Then gitLbl = gitLbl & " *"
         gitW = Me.TextWidth(gitLbl) + 12
+        mGitL = w - DROPBTN_W - gitW
+        mGitR = w - DROPBTN_W
     End If
 
     Dim avail As Long
@@ -466,6 +482,12 @@ Private Sub Form_MouseDown(Button As Integer, Shift As Integer, _
     On Error Resume Next
     If x >= Me.ScaleWidth - DROPBTN_W Then
         If Button = vbLeftButton Then ShowWindowList
+        Exit Sub
+    End If
+
+    ' the branch label is the branch picker's button
+    If mGitR > mGitL And x >= mGitL And x < mGitR Then
+        If Button = vbLeftButton Then Branch_ShowPicker
         Exit Sub
     End If
 

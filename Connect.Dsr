@@ -103,6 +103,7 @@ Private Sub TermAddin()
     Unload frmBrowser
     Unload frmChanges
     Unload frmGitLog
+    Unload frmBranches
     Unload frmGutter
     Unload frmAbout
 
@@ -161,7 +162,8 @@ Private Sub AddMenus()
     AddBtn "Delete Li&nes (Ctrl+Shift+K)", "delline", False
     AddBtn "&Comment / Uncomment (Ctrl+/)", "comment", False
 
-    AddBtn "Git Chan&ges / Commit... (Ctrl+Shift+G)", "gitchanges", True
+    AddBtn "&Switch Branch...", "gitbranch", True
+    AddBtn "Git Chan&ges / Commit... (Ctrl+Shift+G)", "gitchanges", False
     AddBtn "Git Log... (Ctrl+Shift+L)", "gitlog", False
     AddBtn "Git Blame Line (Ctrl+Shift+B)", "gitblame", False
 
@@ -225,7 +227,8 @@ Private Sub AddToolbar()
     AddTool "Find in Files", "findfiles", 172, False
     AddTool "Code Browser (Ctrl+Shift+O)", "browser", 225, False
 
-    AddTool "Git Changes / Commit (Ctrl+Shift+G)", "gitchanges", 0, True, "Git"
+    AddTool "Switch Branch", "gitbranch", 0, True, "Branch"
+    AddTool "Git Changes / Commit (Ctrl+Shift+G)", "gitchanges", 0, False, "Git"
     AddTool "Git Log (Ctrl+Shift+L)", "gitlog", 0, False, "Log"
 
     AddTool "Show/Hide Tabs", "tabs", 0, True, "Tabs"
