@@ -2,7 +2,7 @@ Attribute VB_Name = "modHighlight"
 Option Explicit
 
 ' =====================================================================
-'  "Highlight All" overlay.
+'  Overlays for explicit searches and live code selection.
 '
 '  The VB6 editor exposes no highlight API, so after the code pane
 '  paints we draw outline boxes over every match that is currently
@@ -32,7 +32,22 @@ Public gLineNumsEnabled As Boolean
 
 Private mHL() As MatchInfo
 Private mHLCount As Long
-Private mFindLen As Long
+' The live matches are sorted by line and column for viewport painting.
+' They belong to one editor window and never use the Find dialog state.
+Private Type SelectionHit
+    LineNum As Long
+    Col As Long
+End Type
+
+Private mSelectionHits() As SelectionHit
+Private mSelectionCount As Long
+Private mSelectionPane As Long
+Private mSelectionText As String
+Private mSelectionLine As Long
+Private mSelectionCol As Long
+Private mSelectionLineCount As Long
+Private mSelectionVisible As Boolean
+Private mSelectionSuppressed As Boolean
 
 ' Cached editor font cell size (pixels)
 Private mCharW As Long
@@ -41,14 +56,22 @@ Private mLineHFont As Long
 Public Sub Highlight_SetFromSearch()
     On Error Resume Next
     Highlight_ClearInternal
-    If gMatchCount = 0 Then Exit Sub
-    mHL = gMatches
-    mHLCount = gMatchCount
-    Highlight_EnsureHooks
+    If gMatchCount > 0 Then
+        mHL = gMatches
+        mHLCount = gMatchCount
+        Highlight_EnsureHooks
+    End If
     Highlight_InvalidateAll
 End Sub
 
 Public Sub Highlight_Clear()
+    On Error Resume Next
+    mSelectionSuppressed = (mSelectionPane <> 0)
+    mSelectionVisible = False
+    Highlight_ClearSearch
+End Sub
+
+Public Sub Highlight_ClearSearch()
     On Error Resume Next
     Highlight_ClearInternal
     Highlight_InvalidateAll
@@ -62,13 +85,150 @@ End Sub
 Public Sub Highlight_Terminate()
     On Error Resume Next
     Highlight_ClearInternal
+    ResetSelectionHighlights
     ' Hooks are torn down by Unhook_All at disconnect.
 End Sub
 
 Public Function Highlight_Active() As Boolean
-    Highlight_Active = (mHLCount > 0 Or BM_Count() > 0 Or _
+    Highlight_Active = (mHLCount > 0 Or HasSelectionHighlights(mSelectionPane) Or _
+                        BM_Count() > 0 Or _
                         Git_MarkCount() > 0 Or gGuidesEnabled Or _
                         gLineNumsEnabled)
+End Function
+
+' Called from a dedicated UI timer so selection can update during a drag.
+' Mode and focus checks keep the frequent path out of the object model
+' when the user is in a designer, the Find bar or a running project.
+Public Sub Highlight_PollSelection()
+    On Error GoTo InvalidSelection
+    If gVBE Is Nothing Or gGitSwitching Then GoTo InvalidSelection
+    If Not Mode_IsDesign() Then GoTo InvalidSelection
+
+    Dim hPane As Long
+    hPane = GetFocus()
+    If StrComp(WndClass(hPane), CLS_CODEPANE, vbTextCompare) <> 0 Then
+        ' Keep the range so Clear Highlights still suppresses it when
+        ' the user returns from the menu or the Find bar.
+        If mSelectionVisible Then
+            mSelectionVisible = False
+            InvalidatePane mSelectionPane
+        End If
+        Exit Sub
+    End If
+
+    Dim cp As VBIDE.CodePane
+    Set cp = gVBE.ActiveCodePane
+    If cp Is Nothing Then GoTo InvalidSelection
+
+    Dim sl As Long, sc As Long, el As Long, ec As Long
+    cp.GetSelection sl, sc, el, ec
+    If sl < 1 Or sc < 1 Or el <> sl Or ec <= sc Then GoTo InvalidSelection
+
+    Dim cm As VBIDE.CodeModule, lineCount As Long, selectedText As String
+    Set cm = cp.CodeModule
+    lineCount = cm.CountOfLines
+    If sl > lineCount Then GoTo InvalidSelection
+    selectedText = Mid$(cm.lines(sl, 1), sc, ec - sc)
+    If Len(selectedText) <> ec - sc Then GoTo InvalidSelection
+    If Len(Trim$(Replace$(selectedText, vbTab, " "))) = 0 Then GoTo InvalidSelection
+
+    Dim sameQuery As Boolean
+    sameQuery = (hPane = mSelectionPane And lineCount = mSelectionLineCount And _
+                 Len(selectedText) = Len(mSelectionText) And _
+                 StrComp(selectedText, mSelectionText, vbTextCompare) = 0)
+    If sameQuery And sl = mSelectionLine And sc = mSelectionCol Then
+        If mSelectionSuppressed Or mSelectionVisible Then Exit Sub
+    Else
+        mSelectionSuppressed = False
+    End If
+
+    If HasSelectionHighlights(mSelectionPane) And hPane <> mSelectionPane Then
+        InvalidatePane mSelectionPane
+    End If
+    mSelectionPane = hPane
+    mSelectionLine = sl
+    mSelectionCol = sc
+    mSelectionLineCount = lineCount
+    mSelectionText = selectedText
+    If Not sameQuery Then CollectSelectionHits cm.lines(1, lineCount), selectedText
+
+    mSelectionVisible = True
+    If mSelectionCount > 1 Then EnsurePaneHooks hPane
+    InvalidatePane hPane
+    Exit Sub
+
+InvalidSelection:
+    ResetSelectionHighlights
+End Sub
+
+Private Sub ResetSelectionHighlights()
+    Dim hPane As Long
+    If HasSelectionHighlights(mSelectionPane) Then hPane = mSelectionPane
+    mSelectionPane = 0
+    mSelectionText = vbNullString
+    mSelectionCount = 0
+    mSelectionVisible = False
+    mSelectionSuppressed = False
+    Erase mSelectionHits
+    If hPane <> 0 Then InvalidatePane hPane
+End Sub
+
+Private Sub CollectSelectionHits(ByVal source As String, ByVal selectedText As String)
+    Dim sourceLines() As String
+    sourceLines = Split(source, vbCrLf)
+    mSelectionCount = 0
+    ReDim mSelectionHits(0 To 63)
+
+    Dim row As Long, col As Long
+    For row = LBound(sourceLines) To UBound(sourceLines)
+        col = InStr(1, sourceLines(row), selectedText, vbTextCompare)
+        Do While col > 0
+            If mSelectionCount > UBound(mSelectionHits) Then
+                ReDim Preserve mSelectionHits(0 To mSelectionCount * 2 - 1)
+            End If
+            mSelectionHits(mSelectionCount).LineNum = row + 1
+            mSelectionHits(mSelectionCount).Col = col
+            mSelectionCount = mSelectionCount + 1
+            col = InStr(col + 1, sourceLines(row), selectedText, vbTextCompare)
+        Loop
+    Next
+End Sub
+
+Private Function HasSelectionHighlights(ByVal hPane As Long) As Boolean
+    HasSelectionHighlights = (mSelectionVisible And mSelectionCount > 1 And _
+                              hPane = mSelectionPane)
+End Function
+
+' Lower bound in the sorted list. Passing col = 1 locates the start of a
+' displayed line without walking every hit above the viewport.
+Private Function FirstSelectionHit(ByVal lineNum As Long, ByVal col As Long) As Long
+    Dim lo As Long, hi As Long, mid As Long
+    hi = mSelectionCount
+    Do While lo < hi
+        mid = lo + (hi - lo) \ 2
+        With mSelectionHits(mid)
+            If .LineNum < lineNum Or (.LineNum = lineNum And .Col < col) Then
+                lo = mid + 1
+            Else
+                hi = mid
+            End If
+        End With
+    Loop
+    FirstSelectionHit = lo
+End Function
+
+Private Function IsSelectionCopy(ByVal lineNum As Long, ByVal col As Long) As Boolean
+    IsSelectionCopy = (lineNum <> mSelectionLine Or col <> mSelectionCol)
+End Function
+
+Private Function IsVisibleSelectionHit(ByVal lineNum As Long, ByVal col As Long, _
+        ByVal length As Long) As Boolean
+    If length <> Len(mSelectionText) Then Exit Function
+    If Not IsSelectionCopy(lineNum, col) Then Exit Function
+    Dim i As Long
+    i = FirstSelectionHit(lineNum, col)
+    If i >= mSelectionCount Then Exit Function
+    IsVisibleSelectionHit = (mSelectionHits(i).LineNum = lineNum And mSelectionHits(i).Col = col)
 End Function
 
 Public Sub Guides_Init()
@@ -114,17 +274,14 @@ Public Sub Highlight_EnsureHooks()
     Dim cp As VBIDE.CodePane, H As Long
     For Each cp In gVBE.CodePanes
         H = CodePaneHwnd(cp)
-        If H <> 0 Then
-            If Not Hook_IsHooked(H) Then
-                Hook_Window H, hpCodePane
-                HookPaneScrollbar H
-            End If
-        End If
+        If H <> 0 Then EnsurePaneHooks H
     Next
 End Sub
 
-Private Sub HookPaneScrollbar(ByVal hPane As Long)
-    On Error Resume Next
+Private Sub EnsurePaneHooks(ByVal hPane As Long)
+    If Hook_IsHooked(hPane) Then Exit Sub
+    If Not Hook_Window(hPane, hpCodePane) Then Exit Sub
+
     ' The editor's scrollbars are child "ScrollBar" controls of the
     ' VbaWindow itself.
     Dim hSB As Long
@@ -139,13 +296,15 @@ Public Sub Highlight_InvalidateAll()
     Dim cp As VBIDE.CodePane, H As Long
     For Each cp In gVBE.CodePanes
         H = CodePaneHwnd(cp)
-        If H <> 0 Then
-            InvalidateRect H, 0, 1
-            Dim hSB As Long
-            hSB = FindVScrollBarChild(H)
-            If hSB <> 0 Then InvalidateRect hSB, 0, 0
-        End If
+        If H <> 0 Then InvalidatePane H
     Next
+End Sub
+
+Private Sub InvalidatePane(ByVal hPane As Long)
+    InvalidateRect hPane, 0, 1
+    Dim hSB As Long
+    hSB = FindVScrollBarChild(hPane)
+    If hSB <> 0 Then InvalidateRect hSB, 0, 0
 End Sub
 
 ' ---------------------------------------------------------------------
@@ -226,29 +385,45 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     End If
 
     Dim i As Long, y As Long
-    If mHLCount > 0 Then
+    Dim showSelection As Boolean
+    showSelection = HasSelectionHighlights(hwnd)
+    If mHLCount > 0 Or showSelection Then
         Dim hPen As Long, hOldPen As Long, hOldBr As Long
         hPen = CreatePen(PS_SOLID, 1, HL_COLOR)
         hOldPen = SelectObject(hdc, hPen)
         hOldBr = SelectObject(hdc, GetStockObject(NULL_BRUSH))
 
-        Dim x1 As Long, x2 As Long, halfW As Long
-        halfW = mCharW \ 2
+        Dim firstLine As Long, lastLine As Long, matchTop As Long
+        firstLine = topLine
+        If loLine > firstLine Then firstLine = loLine
+        lastLine = topLine + visLines - 1
+        If hiLine < lastLine Then lastLine = hiLine
+        matchTop = yTop + ScaleForDpi(3)
+
         For i = 0 To mHLCount - 1
             If mHL(i).Comp = compName And mHL(i).Proj = projName Then
-                If mHL(i).LineNum >= topLine And _
-                   mHL(i).LineNum < topLine + visLines And _
-                   mHL(i).LineNum >= loLine And mHL(i).LineNum <= hiLine Then
-                    y = yTop + (mHL(i).LineNum - topLine) * lineH + ScaleForDpi(3)
-                    ' margin estimate runs one cell short in practice,
-                    ' hence Col instead of Col - 1; the right edge gets
-                    ' an extra half cell so the last char isn't bisected
-                    x1 = marginPx + mHL(i).Col * mCharW
-                    x2 = x1 + mHL(i).MatchLen * mCharW + halfW
-                    Rectangle hdc, x1 - 1, y, x2 + 1, y + lineH
+                If mHL(i).LineNum >= firstLine And mHL(i).LineNum <= lastLine Then
+                    If showSelection Then
+                        If IsVisibleSelectionHit(mHL(i).LineNum, mHL(i).Col, mHL(i).MatchLen) Then GoTo NextManualHit
+                    End If
+                    y = matchTop + (mHL(i).LineNum - topLine) * lineH
+                    PaintMatchBox hdc, marginPx, y, lineH, mHL(i).Col, mHL(i).MatchLen
                 End If
             End If
+NextManualHit:
         Next
+
+        If showSelection Then
+            For i = FirstSelectionHit(firstLine, 1) To mSelectionCount - 1
+                With mSelectionHits(i)
+                    If .LineNum > lastLine Then Exit For
+                    If IsSelectionCopy(.LineNum, .Col) Then
+                        y = matchTop + (.LineNum - topLine) * lineH
+                        PaintMatchBox hdc, marginPx, y, lineH, .Col, Len(mSelectionText)
+                    End If
+                End With
+            Next
+        End If
 
         SelectObject hdc, hOldPen
         SelectObject hdc, hOldBr
@@ -293,6 +468,15 @@ Public Sub Highlight_PaintPane(ByVal hwnd As Long)
     End If
 
     ReleaseDC hwnd, hdc
+End Sub
+
+Private Sub PaintMatchBox(ByVal hdc As Long, ByVal marginPx As Long, _
+        ByVal y As Long, ByVal lineH As Long, ByVal col As Long, ByVal length As Long)
+    ' The margin estimate runs one cell short. The right edge gets an
+    ' extra half cell so the last character is clear of the outline.
+    Dim x As Long
+    x = marginPx + col * mCharW
+    Rectangle hdc, x - 1, y, x + length * mCharW + mCharW \ 2 + 1, y + lineH
 End Sub
 
 ' Dotted vertical lines at each indent step, drawn only inside the
@@ -494,6 +678,20 @@ Public Sub Highlight_PaintScrollbar(ByVal hwnd As Long)
             End If
         End If
     Next
+
+    If HasSelectionHighlights(hPane) Then
+        Dim lastMarkedLine As Long
+        For i = FirstSelectionHit(loLine, 1) To mSelectionCount - 1
+            With mSelectionHits(i)
+                If .LineNum > hiLine Then Exit For
+                If .LineNum <> lastMarkedLine And IsSelectionCopy(.LineNum, .Col) Then
+                    y = arrowH + CLng((.LineNum - loLine) / totalLines * trackH)
+                    Rectangle hdc, 2, y, (rc.Right - rc.Left) - 2, y + 3
+                    lastMarkedLine = .LineNum
+                End If
+            End With
+        Next
+    End If
 
     SelectObject hdc, hOldPen
     SelectObject hdc, hOldBr

@@ -33,6 +33,12 @@ open modules, whole project. Enter/Shift+Enter and F3/Shift+F3
 navigate; Esc closes. **Highlight** outlines every match in the editor
 and marks it on the vertical scrollbar (orange).
 
+While you select text on one line in a code window, the editor outlines
+other case-insensitive occurrences in the current module and marks them
+on the scrollbar. The highlights follow the selection as you extend or
+shrink it and disappear when you deselect. Use **Clear Highlights** to
+clear both search and selection marks until the selection changes.
+
 ![find and replace panel](images/find-replace-panel-highlight.png)
 
 ### Find in Files
@@ -445,8 +451,8 @@ between branches that already exist.
   margin heuristic). Horizontal editor scrolling isn't detectable, so
   overlays assume the view starts at column 1; real tab characters in
   source lines shift positions.
-- Highlights go stale while editing until re-run (VS clears on edit
-  too); regex works per line (no multi-line patterns).
+- Explicit search highlights can go stale while editing until re-run.
+  Regex works per line (no multi-line patterns).
 - Git line markers and backups reflect files as *saved on disk*, not
   unsaved editor buffers.
 - Unstaging uses `git reset HEAD` (works on any git); in a brand-new
