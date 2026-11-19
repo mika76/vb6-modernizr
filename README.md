@@ -33,11 +33,13 @@ open modules, whole project. Enter/Shift+Enter and F3/Shift+F3
 navigate; Esc closes. **Highlight** outlines every match in the editor
 and marks it on the vertical scrollbar (orange).
 
-While you select text on one line in a code window, the editor outlines
-other case-insensitive occurrences in the current module and marks them
-on the scrollbar. The highlights follow the selection as you extend or
-shrink it and disappear when you deselect. Use **Clear Highlights** to
-clear both search and selection marks until the selection changes.
+Enable **Modernizr > Highlight Selection Matches** to outline other
+case-insensitive occurrences of the selected text in the current module
+and mark them on the scrollbar. The option is off by default and is
+remembered across IDE sessions. Highlights follow single-line selections
+as you extend or shrink them and disappear when you deselect. Use
+**Clear Highlights** to clear both search and selection marks until the
+selection changes.
 
 ![find and replace panel](images/find-replace-panel-highlight.png)
 

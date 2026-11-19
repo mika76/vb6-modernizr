@@ -5,7 +5,7 @@ Option Explicit
 '  Central command dispatcher: menu items (clsMenuButton) and any
 '  future toolbar buttons route here by action name.
 '
-'  Toggle commands (tabs / guides / backup) register their
+'  Toggle commands register their
 '  CommandBarButtons here so their checked state can track the flag;
 '  one action can have several buttons (menu item + toolbar button).
 ' =====================================================================
@@ -37,6 +37,7 @@ Public Sub Menu_SyncToggles()
     SetToggleState "tabs", gTabBarVisible
     SetToggleState "guides", gGuidesEnabled
     SetToggleState "linenums", gLineNumsEnabled
+    SetToggleState "selectionhl", gSelectionHighlightsEnabled
     SetToggleState "backup", Backup_Enabled()
 End Sub
 
@@ -124,6 +125,7 @@ Public Sub DoAction(ByVal act As String)
     Case "delline":   Edit_DeleteLines
     Case "comment":   Edit_ToggleComment
     Case "clearhl":   Highlight_Clear
+    Case "selectionhl": SelectionHighlights_Toggle
     Case "tabs":      TabBar_Toggle
     Case "guides":    Guides_Toggle
     Case "linenums":  LineNums_Toggle

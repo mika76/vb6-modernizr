@@ -39,6 +39,9 @@ Private Type SelectionHit
     Col As Long
 End Type
 
+Private Const SELECTION_HIGHLIGHTS_OPTION As String = "SelectionHighlights"
+Public gSelectionHighlightsEnabled As Boolean
+
 Private mSelectionHits() As SelectionHit
 Private mSelectionCount As Long
 Private mSelectionPane As Long
@@ -96,11 +99,27 @@ Public Function Highlight_Active() As Boolean
                         gLineNumsEnabled)
 End Function
 
+Public Sub SelectionHighlights_Init()
+    gSelectionHighlightsEnabled = _
+        (GetSetting("VB6Modernizr", "Options", SELECTION_HIGHLIGHTS_OPTION, "0") = "1")
+    frmTabs.SetSelectionPolling gSelectionHighlightsEnabled
+End Sub
+
+Public Sub SelectionHighlights_Toggle()
+    On Error Resume Next
+    gSelectionHighlightsEnabled = Not gSelectionHighlightsEnabled
+    SaveSetting "VB6Modernizr", "Options", SELECTION_HIGHLIGHTS_OPTION, _
+                IIf(gSelectionHighlightsEnabled, "1", "0")
+    frmTabs.SetSelectionPolling gSelectionHighlightsEnabled
+    If Not gSelectionHighlightsEnabled Then ResetSelectionHighlights
+End Sub
+
 ' Called from a dedicated UI timer so selection can update during a drag.
 ' Mode and focus checks keep the frequent path out of the object model
 ' when the user is in a designer, the Find bar or a running project.
 Public Sub Highlight_PollSelection()
     On Error GoTo InvalidSelection
+    If Not gSelectionHighlightsEnabled Then Exit Sub
     If gVBE Is Nothing Or gGitSwitching Then GoTo InvalidSelection
     If Not Mode_IsDesign() Then GoTo InvalidSelection
 

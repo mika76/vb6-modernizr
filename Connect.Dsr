@@ -83,6 +83,7 @@ Private Sub InitAddin()
     LineNums_Init
     Backup_Init
     TabBar_Init
+    SelectionHighlights_Init
     Menu_SyncToggles
 End Sub
 
@@ -168,6 +169,7 @@ Private Sub AddMenus()
     AddBtn "Git Blame Line (Ctrl+Shift+B)", "gitblame", False
 
     AddBtn "Clear &Highlights", "clearhl", True
+    AddBtn "Highlight Selection &Matches", "selectionhl", False
     AddBtn "Show/Hide &Tabs", "tabs", False
     AddBtn "Indentation G&uides", "guides", False
     AddBtn "Line &Numbers", "linenums", False
@@ -192,7 +194,7 @@ Private Function AddBtn(ByVal cap As String, ByVal act As String, _
 
     ' on/off commands show a check mark tracking their flag
     Select Case act
-    Case "tabs", "guides", "linenums", "backup"
+    Case "tabs", "guides", "linenums", "selectionhl", "backup"
         Menu_RegisterToggle act, btn
     End Select
     Set AddBtn = btn

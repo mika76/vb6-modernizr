@@ -23,6 +23,7 @@ Begin VB.Form frmTabs
       Top             =   0
    End
    Begin VB.Timer tmrSelection
+      Enabled         =   0  'False
       Interval        =   75
       Left            =   480
       Top             =   0
@@ -135,6 +136,10 @@ Public Sub Reposition()
 End Sub
 
 ' ---------------------------------------------------------------------
+
+Public Sub SetSelectionPolling(ByVal enabled As Boolean)
+    tmrSelection.Enabled = enabled
+End Sub
 
 Private Sub tmrSelection_Timer()
     Highlight_PollSelection
